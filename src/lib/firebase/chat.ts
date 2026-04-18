@@ -25,8 +25,12 @@ export const saveChatMessage = async (userId: string, role: "user" | "model", co
       content,
       createdAt: Timestamp.now()
     });
-  } catch (error) {
-    console.error("saveChatMessage failed:", error);
+  } catch (error: any) {
+    console.error("saveChatMessage error detail:", {
+      code: error.code,
+      message: error.message,
+      stack: error.stack
+    });
     throw error;
   }
 };
@@ -44,8 +48,12 @@ export const getRecentChatMessages = async (userId: string, count: number = 30):
     })) as ChatMessage[];
     
     return messages.reverse();
-  } catch (error) {
-    console.error("getRecentChatMessages failed:", error);
+  } catch (error: any) {
+    console.error("getRecentChatMessages error detail:", {
+      code: error.code,
+      message: error.message,
+      stack: error.stack
+    });
     return [];
   }
 };

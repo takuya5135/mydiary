@@ -24,18 +24,27 @@ export interface BucketItem {
 const COLLECTION_NAME = "bucket_list";
 
 export const getBucketList = async (userId: string): Promise<BucketItem[]> => {
-  const q = query(
-    collection(db, COLLECTION_NAME), 
-    where("userId", "==", userId)
-  );
-  const querySnapshot = await getDocs(q);
-  const results = querySnapshot.docs.map(doc => ({
-    id: doc.id,
-    ...doc.data()
-  } as BucketItem));
-  
-  // 作成日時の降順でソート（新しい順）
-  return results.sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis());
+  try {
+    const q = query(
+      collection(db, COLLECTION_NAME), 
+      where("userId", "==", userId)
+    );
+    const querySnapshot = await getDocs(q);
+    const results = querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    } as BucketItem));
+    
+    // 作成日時の降順でソート（新しい順）
+    return results.sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis());
+  } catch (error: any) {
+    console.error("getBucketList error detail:", {
+      code: error.code,
+      message: error.message,
+      stack: error.stack
+    });
+    return [];
+  }
 };
 
 export const addBucketItem = async (userId: string, title: string) => {
