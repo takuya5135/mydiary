@@ -106,13 +106,19 @@ export function ChatWindow({ userId, dateStr }: ChatWindowProps) {
         todaysDiaryContext = `Home: ${todaysEntry.segments.home}\nWork: ${todaysEntry.segments.work}\nHobby: ${todaysEntry.segments.hobby}`;
       }
 
-      // 過去の記録を時系列でコンテキスト化（トークン節約のため直近7日は詳細、以降は日付のみ）
+      // 過去の記録を時系列でコンテキスト化（トークン節約と精度向上のための階層型圧縮）
       const pastContext = recentEntries.length > 0
         ? recentEntries.map((e, idx) => {
             const dateStr = `【${e.date}】`;
-            if (idx < 7) {
+            // 1. 直近3日分：全テキスト（詳細）
+            if (idx < 3) {
               return `${dateStr}\n  Home: ${e.segments?.home || "-"}\n  Work: ${e.segments?.work || "-"}\n  Hobby: ${e.segments?.hobby || "-"}`;
             }
+            // 2. 4〜14日分：AI抽出キーワードのみ（中程度）
+            if (idx < 14) {
+              return `${dateStr} キーワード: ${e.keywords?.join(", ") || "なし"}`;
+            }
+            // 3. それ以前：日付のみ（軽量）
             return `${dateStr} (記録あり)`;
           }).join("\n")
         : "記録なし";
@@ -235,12 +241,20 @@ export function ChatWindow({ userId, dateStr }: ChatWindowProps) {
                   </p>
                 </div>
               )}
-              {messages.map((msg, i) => {
+              {messages.filter(msg => {
+                // モデルの返信は自分のIDのものだけ表示
+                if (msg.role === "model") return msg.agentId === activePersona;
+                // ユーザーのメッセージは、次のメッセージが現在の人格の返信であるか、
+                // または現在のタブ向けに送られたもの（後述の拡張で対応）を表示
+                return true; 
+              }).map((msg, i, filtered) => {
                 const isUser = msg.role === "user";
                 const persona = PERSONAS.find(p => p.id === (msg.agentId || "log"));
                 
+                // ユーザーメッセージの表示フィルタリング（簡易版：直後の返信が自分のでない場合は非表示にするロジックも検討可能だが、一旦は表示）
+                
                 return (
-                  <div key={i} className={`flex ${isUser ? "justify-end" : "justify-start"} items-end space-x-2`}>
+                  <div key={i} className={`flex ${isUser ? "justify-end" : "justify-start"} items-end space-x-2 animate-in fade-in slide-in-from-bottom-2 duration-300`}>
                     {!isUser && (
                       <div className={`w-7 h-7 rounded-full ${persona?.color || "bg-slate-600"} flex items-center justify-center text-white text-[10px] shadow-sm mb-1 flex-shrink-0`}>
                         {persona?.icon}

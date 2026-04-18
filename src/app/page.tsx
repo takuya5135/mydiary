@@ -201,7 +201,7 @@ Updated at: ${entry.updatedAt ? entry.updatedAt.toDate().toLocaleString() : "不
             className="flex items-center space-x-2 px-4 py-2 rounded-full bg-slate-900 border border-slate-800 text-slate-300 hover:text-white transition-colors text-xs font-bold"
           >
             <Book size={16} className="text-orange-500" />
-            <span className="btn-text-fix">固有名詞辞書</span>
+            <span className="btn-text-fix">ナレッジ・ベース</span>
           </button>
           
           <button 
@@ -245,12 +245,30 @@ Updated at: ${entry.updatedAt ? entry.updatedAt.toDate().toLocaleString() : "不
         {/* --- RIGHT PANE (OUTPUT) --- */}
         <section className="right-pane">
           <div className="space-y-6">
+            {/* VISUAL HIGHLIGHTS (GALLERY) */}
+            <div className="glass-panel p-6 animate-slide-up">
+              <div className="flex items-center space-x-3 mb-6">
+                <div className="bg-orange-100 dark:bg-orange-900/40 p-2 rounded-lg text-orange-600 dark:text-orange-400">
+                  <span className="text-xl">📸</span>
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-slate-700 dark:text-slate-200 uppercase tracking-widest">Daily Highlights</h3>
+                  <p className="text-[10px] text-slate-500 font-medium whitespace-nowrap">その日の空気感を象徴する断片</p>
+                </div>
+              </div>
+              <PhotoCuration 
+                userId={user.uid} 
+                date={dateStr} 
+                selectedPhotoIds={entry?.photos || []}
+                onUpdate={fetchEntry} 
+              />
+            </div>
+
             {/* HOME COLUMN */}
             <Column
               id="home"
               title="Home"
               icon={<Home size={28} />}
-              className="animate-slide-up"
             >
               <div className="grid grid-cols-2 gap-4 mb-4">
                 <button 
@@ -282,15 +300,6 @@ Updated at: ${entry.updatedAt ? entry.updatedAt.toDate().toLocaleString() : "不
                   />
                 </div>
               )}
-
-              <div className="mt-6 border-t border-slate-100 dark:border-zinc-800 pt-6">
-                <PhotoCuration 
-                  userId={user.uid} 
-                  date={dateStr} 
-                  selectedPhotoIds={entry?.photos || []}
-                  onUpdate={fetchEntry} 
-                />
-              </div>
             </Column>
 
             {/* WORK COLUMN */}

@@ -75,7 +75,7 @@ body {
     @apply flex flex-col md:flex-row w-full max-w-[1800px] mx-auto gap-8 px-4 md:px-8;
   }
   .left-pane {
-    @apply w-full md:w-[480px] flex-shrink-0 md:sticky md:top-8 self-start;
+    @apply w-full md:w-1/2 flex-shrink-0 md:sticky md:top-8 self-start;
   }
   .right-pane {
     @apply flex-1 min-w-0 space-y-8 pb-20;

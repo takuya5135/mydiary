@@ -54,12 +54,29 @@ ${dictionaryContext || "未登録"}
 `;
 
   try {
-    const result = await model.generateContent(prompt);
-    const responseText = result.response.text();
+    let attempts = 0;
+    let responseText = "";
+
+    while (attempts < 3) {
+      try {
+        const result = await model.generateContent(prompt);
+        responseText = result.response.text();
+        break;
+      } catch (error: any) {
+        attempts++;
+        if (error.message?.includes("429") && attempts < 3) {
+          const delay = Math.pow(2, attempts) * 1000;
+          await new Promise(res => setTimeout(res, delay));
+          continue;
+        }
+        throw error;
+      }
+    }
+
     const jsonStr = responseText.replace(/```json\n?|```/g, "").trim();
     return JSON.parse(jsonStr) as OrganizeResult;
   } catch (error) {
-    console.error("Diary organization failed:", error);
+    console.error("Diary organization failed after retries:", error);
     throw error;
   }
 };
@@ -110,7 +127,9 @@ export const chatWithCompanion = async (
   };
 
   let systemContext = `
-あなたはユーザーのQOLを最大化するためのAI連合チーム「チャンピオンメーカー」です。
+あなたはユーザーのQOLを最大化するためのAI連合チーム「チャンピオンメーカー」の一員です。
+他のキャラクター（LOG, MAMO, WAKU, ZEN）とユーザーとの過去のチャット履歴もすべてあなたの記憶として共有されています。
+誰が何を話したかを踏まえ、チームとして一貫性のある対話を行ってください。
 提供されたすべてのデータを「自分の完璧な記憶」として扱ってください。
 
 ### 指定の人格 (Persona):
@@ -161,12 +180,31 @@ ${pastContext || "なし"}
   });
 
   try {
-    const response = await model.generateContent({ contents });
-    const responseText = response.response.text();
+    // 429エラー対策: 最大3回リトライ
+    let attempts = 0;
+    let responseText = "";
+    
+    while (attempts < 3) {
+      try {
+        const response = await model.generateContent({ contents });
+        responseText = response.response.text();
+        break;
+      } catch (error: any) {
+        attempts++;
+        if (error.message?.includes("429") && attempts < 3) {
+          const delay = Math.pow(2, attempts) * 1000;
+          console.warn(`Gemini 429 Error. Retrying in ${delay}ms... (Attempt ${attempts})`);
+          await new Promise(res => setTimeout(res, delay));
+          continue;
+        }
+        throw error;
+      }
+    }
+
     const jsonStr = responseText.replace(/```json\n?|```/g, "").trim();
     return JSON.parse(jsonStr) as ChatCompanionResult;
   } catch (error: any) {
-    console.error("Chat generation failed:", error);
+    console.error("Chat generation failed after retries:", error);
     throw error;
   }
 };

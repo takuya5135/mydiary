@@ -148,7 +148,18 @@ export function DiaryInput({ userId, date, onSave, onOrganizeTrigger }: DiaryInp
         value={text}
         onChange={(e) => setText(e.target.value)}
         placeholder="今日はどんな一日でしたか？ 思ったことをダラダラと書き出してみましょう..."
-        className="w-full h-32 bg-transparent text-sm text-slate-700 dark:text-slate-200 resize-none focus:outline-none placeholder:text-slate-400 placeholder:italic leading-relaxed"
+        className="w-full bg-transparent text-lg md:text-xl text-slate-700 dark:text-slate-200 resize-none focus:outline-none placeholder:text-slate-400 placeholder:italic leading-relaxed min-h-[300px] overflow-hidden"
+        onInput={(e) => {
+          const target = e.target as HTMLTextAreaElement;
+          target.style.height = "auto";
+          target.style.height = target.scrollHeight + "px";
+        }}
+        ref={(el) => {
+          if (el) {
+            el.style.height = "auto";
+            el.style.height = el.scrollHeight + "px";
+          }
+        }}
       />
 
       <div className="flex justify-between items-center pt-2">

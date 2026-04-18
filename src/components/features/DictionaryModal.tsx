@@ -84,7 +84,7 @@ export function DictionaryModal({ userId, isOpen, onClose }: DictionaryModalProp
               <header className="p-4 border-b border-white/10 flex justify-between items-center">
                 <div className="flex items-center space-x-2 text-white">
                   <Book size={20} className="text-orange-500" />
-                  <span className="font-bold">固有名詞辞書</span>
+                  <span className="font-bold">ナレッジ・ベース</span>
                 </div>
                 <button 
                   onClick={() => setEditingItem({ name: "", aliases: [], category: "person", attributes: {} })}
