@@ -8,7 +8,7 @@ import {
   getDocs,
   Timestamp 
 } from "firebase/firestore";
-import { serverDb } from "./server-config";
+import { db as serverDb } from "./config";
 
 export interface ChatMessage {
   id?: string;

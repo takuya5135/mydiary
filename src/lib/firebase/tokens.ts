@@ -1,5 +1,5 @@
 import { doc, updateDoc, setDoc, getDoc, Timestamp } from "firebase/firestore";
-import { serverDb as db } from "./server-config";
+import { db } from "./config";
 
 const COLLECTION_NAME = "users";
 
