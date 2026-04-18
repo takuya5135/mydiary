@@ -112,7 +112,7 @@ export function DictionaryModal({ userId, isOpen, onClose }: DictionaryModalProp
             </div>
 
             {/* Editor Area */}
-            <div className="flex-1 flex flex-col bg-white/5 relative">
+            <div className="flex-1 flex flex-col bg-slate-900/40 backdrop-blur-md relative">
               <button 
                 onClick={onClose}
                 className="absolute top-4 right-4 p-2 hover:bg-white/10 rounded-full text-slate-400"
@@ -125,23 +125,23 @@ export function DictionaryModal({ userId, isOpen, onClose }: DictionaryModalProp
                   <div className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-1.5">
-                        <label className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">正式名称 / 表示名</label>
+                        <label className="text-[10px] uppercase tracking-wider text-slate-300 font-black">正式名称 / 表示名</label>
                         <input 
                           value={editingItem.name}
                           onChange={e => setEditingItem({ ...editingItem, name: e.target.value })}
-                          className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                          className="w-full bg-slate-950/60 border border-white/20 rounded-xl px-4 py-2.5 text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all"
                           placeholder="例: 山田 太郎"
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <label className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">カテゴリ</label>
+                        <label className="text-[10px] uppercase tracking-wider text-slate-300 font-black">カテゴリ</label>
                         <div className="grid grid-cols-2 gap-2">
                           {categories.map(cat => (
                             <button
                               key={cat.id}
                               onClick={() => setEditingItem({ ...editingItem, category: cat.id as any })}
-                              className={`flex items-center space-x-2 p-2 rounded-lg text-xs transition-all ${
-                                editingItem.category === cat.id ? "bg-orange-500 text-white" : "bg-white/5 text-slate-400"
+                              className={`flex items-center space-x-2 p-2 rounded-lg text-xs font-bold transition-all ${
+                                editingItem.category === cat.id ? "bg-orange-600 text-white shadow-lg shadow-orange-600/20" : "bg-slate-950/40 text-slate-400 hover:bg-slate-950/60"
                               }`}
                             >
                               {cat.icon}
@@ -153,33 +153,52 @@ export function DictionaryModal({ userId, isOpen, onClose }: DictionaryModalProp
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">あだ名 / 呼び名 (カンマ区切り)</label>
+                      <label className="text-[10px] uppercase tracking-wider text-slate-300 font-black">あだ名 / 呼び名 (カンマ区切り)</label>
                       <input 
                         value={editingItem.aliases?.join(", ")}
                         onChange={e => setEditingItem({ ...editingItem, aliases: e.target.value.split(",").map(a => a.trim()).filter(a => a) })}
-                        className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        className="w-full bg-slate-950/60 border border-white/20 rounded-xl px-4 py-2.5 text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all"
                         placeholder="例: たろう, パパ, 山田さん"
                       />
                     </div>
 
                     {editingItem.category === "person" && (
-                      <div className="grid grid-cols-2 gap-4 p-4 rounded-2xl bg-white/5 border border-white/10">
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-4 p-4 rounded-2xl bg-slate-950/40 border border-white/10">
                         <div className="space-y-1.5">
-                          <label className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">生年</label>
+                          <label className="text-[10px] uppercase tracking-wider text-slate-300 font-black">生年 (西暦)</label>
                           <input 
                             type="number"
                             value={editingItem.attributes?.birthYear || ""}
                             onChange={e => setEditingItem({ ...editingItem, attributes: { ...editingItem.attributes, birthYear: parseInt(e.target.value) } })}
-                            className="w-full bg-transparent border-b border-white/10 py-1 text-sm text-white focus:outline-none focus:border-orange-500"
+                            className="w-full bg-transparent border-b border-white/20 py-1 text-sm text-white focus:outline-none focus:border-orange-500 transition-colors"
                             placeholder="1990"
                           />
                         </div>
                         <div className="space-y-1.5">
-                          <label className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">出身地 / 属性</label>
+                          <label className="text-[10px] uppercase tracking-wider text-slate-300 font-black">生年月日 (任意)</label>
+                          <input 
+                            type="text"
+                            value={editingItem.attributes?.birthDate || ""}
+                            onChange={e => setEditingItem({ ...editingItem, attributes: { ...editingItem.attributes, birthDate: e.target.value } })}
+                            className="w-full bg-transparent border-b border-white/20 py-1 text-sm text-white focus:outline-none focus:border-orange-500 transition-colors"
+                            placeholder="1990-01-01"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] uppercase tracking-wider text-slate-300 font-black">関係性</label>
+                          <input 
+                            value={editingItem.attributes?.relationship || ""}
+                            onChange={e => setEditingItem({ ...editingItem, attributes: { ...editingItem.attributes, relationship: e.target.value } })}
+                            className="w-full bg-transparent border-b border-white/20 py-1 text-sm text-white focus:outline-none focus:border-orange-500 transition-colors"
+                            placeholder="中学の同級生、仕事の取引先など"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] uppercase tracking-wider text-slate-300 font-black">出身地 / 属性</label>
                           <input 
                             value={editingItem.attributes?.origin || ""}
                             onChange={e => setEditingItem({ ...editingItem, attributes: { ...editingItem.attributes, origin: e.target.value } })}
-                            className="w-full bg-transparent border-b border-white/10 py-1 text-sm text-white focus:outline-none focus:border-orange-500"
+                            className="w-full bg-transparent border-b border-white/20 py-1 text-sm text-white focus:outline-none focus:border-orange-500 transition-colors"
                             placeholder="東京"
                           />
                         </div>
@@ -187,11 +206,11 @@ export function DictionaryModal({ userId, isOpen, onClose }: DictionaryModalProp
                     )}
 
                     <div className="space-y-1.5">
-                      <label className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">メモ / コンテキスト</label>
+                      <label className="text-[10px] uppercase tracking-wider text-slate-300 font-black">メモ / コンテキスト</label>
                       <textarea 
                         value={editingItem.attributes?.memo || ""}
                         onChange={e => setEditingItem({ ...editingItem, attributes: { ...editingItem.attributes, memo: e.target.value } })}
-                        className="w-full h-24 bg-black/20 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-orange-500 resize-none text-sm"
+                        className="w-full h-24 bg-slate-950/60 border border-white/20 rounded-xl px-4 py-2.5 text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-orange-500 resize-none text-sm transition-all"
                         placeholder="この人物との重要な共通の話題や、覚えておくべきこと..."
                       />
                     </div>

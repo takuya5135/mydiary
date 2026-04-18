@@ -109,7 +109,40 @@ Updated at: ${entry.updatedAt ? entry.updatedAt.toDate().toLocaleString() : "不
     await logout();
   };
 
-  const isToday = isSameDay(selectedDate, new Date());
+  const [now, setNow] = useState<Date | null>(null);
+
+  useEffect(() => {
+    setNow(new Date());
+    // 1分ごとに現在時刻を更新
+    const timer = setInterval(() => setNow(new Date()), 60000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const isToday = now ? isSameDay(selectedDate, now) : false;
+
+  const toggleHealthCheck = async (type: 'morning' | 'evening') => {
+    if (!user) return;
+    
+    // 現在のhealthDataを取得または初期化
+    const currentHealth = entry?.healthData || {};
+    const newHealth = {
+      ...currentHealth,
+      [type]: currentHealth[type] ? null : { mood: 1 } // シンプルにON/OFF。データがあれば削除、なければ作成。
+    };
+
+    try {
+      // lib/firebase/entries の saveDiaryEntry を利用
+      const { saveDiaryEntry } = await import("@/lib/firebase/entries");
+      await saveDiaryEntry({
+        userId: user.uid,
+        date: dateStr,
+        healthData: newHealth
+      });
+      fetchEntry(); // データを再取得して表示を更新
+    } catch (error) {
+      console.error("Failed to save health check:", error);
+    }
+  };
 
   return (
     <main className="h-screen w-full p-4 md:p-6 overflow-hidden bg-gradient-to-br from-slate-50 to-slate-100 dark:from-zinc-950 dark:to-zinc-900 flex flex-col">
@@ -227,14 +260,34 @@ Updated at: ${entry.updatedAt ? entry.updatedAt.toDate().toLocaleString() : "不
         >
           {/* Health Check Cards */}
           <div className="grid grid-cols-2 gap-3 mb-2">
-            <div className="glass-card flex flex-col items-center justify-center p-4 text-orange-600 dark:text-orange-400 group cursor-pointer transition-all hover:scale-[1.02]">
-              <Sun size={32} className="mb-2 group-hover:scale-110 transition-transform" />
-              <span className="font-medium text-sm">おはよう</span>
-            </div>
-            <div className="glass-card flex flex-col items-center justify-center p-4 text-indigo-600 dark:text-indigo-400 group cursor-pointer transition-all hover:scale-[1.02]">
-              <Moon size={32} className="mb-2 group-hover:scale-110 transition-transform" />
-              <span className="font-medium text-sm">おやすみ</span>
-            </div>
+            <button 
+              onClick={() => toggleHealthCheck('morning')}
+              className={`glass-card flex flex-col items-center justify-center p-4 group transition-all hover:scale-[1.02] ${
+                entry?.healthData?.morning 
+                  ? "bg-orange-500/20 border-orange-500/50 text-orange-600 dark:text-orange-400 shadow-lg shadow-orange-500/10" 
+                  : "text-slate-400 hover:text-orange-400"
+              }`}
+            >
+              <Sun size={32} className={`mb-2 transition-transform ${entry?.healthData?.morning ? "scale-110" : "group-hover:scale-110"}`} />
+              <div className="flex items-center space-x-1">
+                <span className="font-bold text-sm">おはよう</span>
+                {entry?.healthData?.morning && <CheckCircle2 size={14} className="text-orange-500" />}
+              </div>
+            </button>
+            <button 
+              onClick={() => toggleHealthCheck('evening')}
+              className={`glass-card flex flex-col items-center justify-center p-4 group transition-all hover:scale-[1.02] ${
+                entry?.healthData?.evening 
+                  ? "bg-indigo-500/20 border-indigo-500/50 text-indigo-600 dark:text-indigo-400 shadow-lg shadow-indigo-500/10" 
+                  : "text-slate-400 hover:text-indigo-400"
+              }`}
+            >
+              <Moon size={32} className={`mb-2 transition-transform ${entry?.healthData?.evening ? "scale-110" : "group-hover:scale-110"}`} />
+              <div className="flex items-center space-x-1">
+                <span className="font-bold text-sm">おやすみ</span>
+                {entry?.healthData?.evening && <CheckCircle2 size={14} className="text-indigo-500" />}
+              </div>
+            </button>
           </div>
 
           <div className="glass-card p-4 relative overflow-hidden animate-float">

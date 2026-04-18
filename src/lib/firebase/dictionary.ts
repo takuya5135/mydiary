@@ -21,6 +21,7 @@ export interface DictionaryItem {
   category: "person" | "place" | "organization" | "custom";
   attributes?: {
     birthYear?: number;
+    birthDate?: string;    // 生年月日 (YYYY-MM-DD or MM-DD)
     origin?: string;
     relationship?: string; // 人物の場合
     memo?: string;
