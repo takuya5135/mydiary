@@ -1,0 +1,72 @@
+@import "tailwindcss";
+
+@theme {
+  --color-home-ring: #FF8C00;
+  --color-home-bg: rgba(255, 140, 0, 0.1);
+  --color-work-ring: #000080;
+  --color-work-bg: rgba(0, 0, 128, 0.1);
+  --color-hobby-ring: #50C878;
+  --color-hobby-bg: rgba(80, 200, 120, 0.1);
+
+  --color-glass-border: rgba(255, 255, 255, 0.1);
+  --color-glass-bg: rgba(20, 20, 25, 0.7);
+
+  --animate-fade-in: fade-in 0.3s ease-out;
+  --animate-slide-up: slide-up 0.4s ease-out;
+
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes slide-up {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+}
+
+:root {
+  --background: #f8fafc;
+  --foreground: #0f172a;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #09090b;
+    --foreground: #f8fafc;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  overflow-x: hidden;
+}
+
+/* Glassmorphism utility classes */
+@layer utilities {
+  .glass-panel {
+    @apply bg-white/40 dark:bg-black/20 backdrop-blur-2xl border border-white/20 dark:border-white/5 shadow-2xl rounded-3xl;
+  }
+  .glass-card {
+    @apply bg-white/60 dark:bg-white/5 backdrop-blur-xl border border-white/30 dark:border-white/10 shadow-lg rounded-2xl transition-all duration-300 hover:scale-[1.01] hover:bg-white/80 dark:hover:bg-white/10;
+  }
+  .theme-home {
+    background: radial-gradient(circle at top right, rgba(255, 140, 0, 0.08), transparent 50%);
+  }
+  .theme-work {
+    background: radial-gradient(circle at top right, rgba(0, 0, 128, 0.08), transparent 50%);
+  }
+  .theme-hobby {
+    background: radial-gradient(circle at top right, rgba(16, 185, 129, 0.08), transparent 50%);
+  }
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+}
+
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+  100% { transform: translateY(0px); }
+}
