@@ -37,8 +37,24 @@ export async function executeHuddleAction(
     );
 
     return { success: true, data: huddleResult };
-  } catch (error) {
+  } catch (error: any) {
     console.error("executeHuddleAction failed:", error);
-    return { success: false, error: (error as Error).message };
+    
+    let availableModelsStr = "";
+    try {
+      const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${process.env.GEMINI_API_KEY}`);
+      if (resp.ok) {
+        const data = await resp.json();
+        const models = data.models
+          .filter((m: any) => m.supportedGenerationMethods.includes("generateContent"))
+          .map((m: any) => m.name.replace('models/', ''))
+          .join(", ");
+        availableModelsStr = `\n利用可能なモデル一覧: ${models}`;
+      }
+    } catch (_) {
+      // 取得エラー時は無視
+    }
+
+    return { success: false, error: error.message + availableModelsStr };
   }
 }

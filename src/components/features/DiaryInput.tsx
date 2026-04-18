@@ -116,7 +116,7 @@ ${historyStr}
         if (updatedEntry && onSave) onSave(updatedEntry);
 
       } else {
-        alert("AI会議に失敗しました: " + result.error);
+        alert("AI会議に失敗しました:\n\n" + result.error + "\n\n※正しいモデル名が一覧にある場合は、gemini.tsのモデル名を修正してください。");
       }
     } catch (error) {
       console.error("Huddle execution error:", error);
