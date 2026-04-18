@@ -208,10 +208,10 @@ export default function HomeView() {
               <div className="flex-1">
                 <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 mb-1 flex items-center">
                   マモの報告 (リスク管理者)
-                  <span className={`ml-2 w-2 h-2 rounded-full ${entry?.responses.c2 ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]" : "bg-slate-300 animate-pulse"}`} />
+                  <span className={`ml-2 w-2 h-2 rounded-full ${entry?.responses?.c2 ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]" : "bg-slate-300 animate-pulse"}`} />
                 </h3>
                 <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed italic">
-                  {entry?.responses.c2 || "Huddleを開始すると、マモがリスクを分析します。"}
+                  {entry?.responses?.c2 || "Huddleを開始すると、マモがリスクを分析します。"}
                 </p>
               </div>
             </div>
@@ -255,19 +255,19 @@ export default function HomeView() {
             </div>
            )}
 
-           {entry?.responses.c4 && (
+           {entry?.responses?.c4 && (
              <div className="mt-4 p-4 border-l-4 border-l-slate-400 glass-card animate-float">
                 <div className="flex items-center space-x-2 mb-2 text-slate-600 dark:text-slate-400">
                   <ShieldCheck size={16} />
                   <span className="text-[10px] font-black uppercase tracking-widest">ZEN (大軍師)</span>
                 </div>
                 <p className="text-sm text-slate-700 dark:text-slate-300 italic">
-                  {entry.responses.c4}
+                  {entry?.responses?.c4}
                 </p>
              </div>
            )}
 
-           {!entry?.segments.work && !entry?.responses.c4 && (
+           {!entry?.segments?.work && !entry?.responses?.c4 && (
              <div className="py-20 text-center text-slate-400 text-sm italic opacity-50">Workに関するデータはありません</div>
            )}
         </Column>
@@ -288,19 +288,19 @@ export default function HomeView() {
             </div>
            )}
 
-           {entry?.responses.c3 && (
+           {entry?.responses?.c3 && (
              <div className="mt-4 p-4 border-l-4 border-l-emerald-400 glass-card animate-float">
                 <div className="flex items-center space-x-2 mb-2 text-emerald-600 dark:text-emerald-400">
                   <Heart size={16} />
                   <span className="text-[10px] font-black uppercase tracking-widest">WAKU (トレーナー)</span>
                 </div>
                 <p className="text-sm text-slate-700 dark:text-slate-300 italic leading-relaxed">
-                  {entry.responses.c3}
+                  {entry?.responses?.c3}
                 </p>
              </div>
            )}
 
-           {!entry?.segments.hobby && !entry?.responses.c3 && (
+           {!entry?.segments?.hobby && !entry?.responses?.c3 && (
              <div className="py-20 text-center text-slate-400 text-sm italic opacity-50">Hobbyに関するデータはありません</div>
            )}
         </Column>
