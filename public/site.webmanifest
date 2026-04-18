@@ -1,6 +1,6 @@
 {
-  "name": "MyWebSite",
-  "short_name": "MySite",
+  "name": "my日記",
+  "short_name": "my日記",
   "icons": [
     {
       "src": "/web-app-manifest-192x192.png",

@@ -34,14 +34,16 @@ const COLLECTION_NAME = "dictionary";
 export const getDictionary = async (userId: string): Promise<DictionaryItem[]> => {
   const q = query(
     collection(db, COLLECTION_NAME), 
-    where("userId", "==", userId),
-    orderBy("name", "asc")
+    where("userId", "==", userId)
   );
   const querySnapshot = await getDocs(q);
-  return querySnapshot.docs.map(doc => ({
+  const results = querySnapshot.docs.map(doc => ({
     id: doc.id,
     ...doc.data()
   } as DictionaryItem));
+
+  // 名前順にソート
+  return results.sort((a, b) => a.name.localeCompare(b.name, "ja"));
 };
 
 export const upsertDictionaryItem = async (userId: string, item: Partial<DictionaryItem>) => {

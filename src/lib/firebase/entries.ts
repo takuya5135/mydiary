@@ -74,12 +74,15 @@ export const getRecentEntries = async (userId: string, count: number = 10): Prom
   try {
     const q = query(
       collection(serverDb, COLLECTION_NAME),
-      where("userId", "==", userId),
-      orderBy("date", "desc"),
-      limit(count)
+      where("userId", "==", userId)
     );
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => doc.data() as DiaryEntry);
+    const results = querySnapshot.docs.map(doc => doc.data() as DiaryEntry);
+    
+    // メモリ内でソートして制限
+    return results
+      .sort((a, b) => b.date.localeCompare(a.date))
+      .slice(0, count);
   } catch (error) {
     console.error("getRecentEntries failed:", error);
     return [];
