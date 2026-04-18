@@ -18,6 +18,8 @@ export interface ChatMessage {
   createdAt: Timestamp;
 }
 
+import { sanitizeData } from "./utils";
+
 export const saveChatMessage = async (
   userId: string, 
   role: "user" | "model", 
@@ -26,12 +28,13 @@ export const saveChatMessage = async (
 ) => {
   try {
     const messagesRef = collection(serverDb, "chats", userId, "messages");
-    await addDoc(messagesRef, {
+    const data = sanitizeData({
       role,
       content,
       agentId,
       createdAt: Timestamp.now()
     });
+    await addDoc(messagesRef, data);
   } catch (error: any) {
     console.error("saveChatMessage error detail:", {
       code: error.code,

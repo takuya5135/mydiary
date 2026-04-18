@@ -46,16 +46,20 @@ export const getDictionary = async (userId: string): Promise<DictionaryItem[]> =
   return results.sort((a, b) => a.name.localeCompare(b.name, "ja"));
 };
 
+import { sanitizeData } from "./utils";
+
 export const upsertDictionaryItem = async (userId: string, item: Partial<DictionaryItem>) => {
   if (item.id) {
     const itemRef = doc(db, COLLECTION_NAME, item.id);
-    return await updateDoc(itemRef, { ...item, userId });
+    const data = sanitizeData({ ...item, userId });
+    return await updateDoc(itemRef, data);
   } else {
-    return await addDoc(collection(db, COLLECTION_NAME), {
+    const data = sanitizeData({
       ...item,
       userId,
       createdAt: Timestamp.now()
     });
+    return await addDoc(collection(db, COLLECTION_NAME), data);
   }
 };
 

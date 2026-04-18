@@ -143,6 +143,11 @@ export function ChatWindow({ userId, dateStr }: ChatWindowProps) {
           createdAt: { toDate: () => new Date() }
         };
         setMessages([...newHistory, tempAiMsg]);
+
+        if (result.calendarError) {
+          // カレンダーエラーがある場合、システムメッセージ的なものを追加するか、アラートを出す
+          console.warn("Calendar token expired. User needs to re-login.");
+        }
       } else {
         alert("エラーが発生しました: " + result.error);
       }

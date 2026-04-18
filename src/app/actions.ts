@@ -65,10 +65,18 @@ export async function chatWithAIAction(
   try {
     // カレンダーの予定を取得
     let calendarContext = "予定なし";
+    let calendarError = false;
     if (googleToken) {
-      const events = await fetchDailyCalendarEvents(googleToken, dateStr);
-      if (events.length > 0) {
-        calendarContext = events.map(e => `- ${e.start}〜${e.end}: ${e.summary}`).join("\n");
+      try {
+        const events = await fetchDailyCalendarEvents(googleToken, dateStr);
+        if (events.length > 0) {
+          calendarContext = events.map(e => `- ${e.start}〜${e.end}: ${e.summary}`).join("\n");
+        }
+      } catch (e: any) {
+        if (e.message === "GOOGLE_CALENDAR_UNAUTHORIZED") {
+          calendarContext = "【重要】Googleカレンダーの認証が切れています。ユーザーに再ログイン（Googleでログインし直す）を促してください。";
+          calendarError = true;
+        }
       }
     }
 
@@ -89,7 +97,8 @@ export async function chatWithAIAction(
     return { 
       success: true, 
       reply: aiResult.reply, 
-      agentId: aiResult.agentId 
+      agentId: aiResult.agentId,
+      calendarError
     };
   } catch (error: any) {
     console.error("chatWithAIAction failed:", error);

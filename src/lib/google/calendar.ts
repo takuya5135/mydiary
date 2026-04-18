@@ -24,7 +24,11 @@ export async function fetchDailyCalendarEvents(token: string, dateStr: string): 
     });
 
     if (!res.ok) {
-      console.warn("Failed to fetch calendar events:", await res.text());
+      const errorText = await res.text();
+      console.warn("Google Calendar API Error:", res.status, errorText);
+      if (res.status === 401) {
+        throw new Error("GOOGLE_CALENDAR_UNAUTHORIZED");
+      }
       return [];
     }
 
