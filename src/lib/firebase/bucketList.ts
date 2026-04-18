@@ -26,14 +26,16 @@ const COLLECTION_NAME = "bucket_list";
 export const getBucketList = async (userId: string): Promise<BucketItem[]> => {
   const q = query(
     collection(db, COLLECTION_NAME), 
-    where("userId", "==", userId),
-    orderBy("createdAt", "desc")
+    where("userId", "==", userId)
   );
   const querySnapshot = await getDocs(q);
-  return querySnapshot.docs.map(doc => ({
+  const results = querySnapshot.docs.map(doc => ({
     id: doc.id,
     ...doc.data()
   } as BucketItem));
+  
+  // 作成日時の降順でソート（新しい順）
+  return results.sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis());
 };
 
 export const addBucketItem = async (userId: string, title: string) => {

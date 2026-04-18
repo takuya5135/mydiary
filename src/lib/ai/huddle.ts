@@ -18,7 +18,8 @@ export const runAIHuddle = async (
   rawText: string, 
   pastContext: string,
   bucketListContext: string,
-  dictionaryContext: string
+  dictionaryContext: string,
+  profileContext?: string
 ): Promise<HuddleResult> => {
   const model = getGeminiModel();
 
@@ -32,6 +33,10 @@ ${rawText}
 """
 
 ### コンテキスト情報:
+0. **ユーザーの基本プロフィール・持病・経歴:**
+${profileContext || "未登録"}
+（※特に持病やアレルギーなどの健康情報が含まれている場合は、各アドバイスにおいて厳密に配慮・警告を行ってください）
+
 1. **バケットリスト (人生の全領域における達成目標):**
 ${bucketListContext || "未登録"}
 

@@ -23,6 +23,7 @@ export async function executeHuddleAction(
     bucketListContext: string;
     dictionaryContext: string;
     pastContext: string;
+    profileContext?: string;
   }
 ) {
   try {
@@ -31,7 +32,8 @@ export async function executeHuddleAction(
       rawText, 
       contextStrings.pastContext, 
       contextStrings.bucketListContext, 
-      contextStrings.dictionaryContext
+      contextStrings.dictionaryContext,
+      contextStrings.profileContext
     );
 
     return { success: true, data: huddleResult };

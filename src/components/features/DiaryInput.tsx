@@ -5,6 +5,7 @@ import { Send, Mic, Sparkles, Loader2, Save } from "lucide-react";
 import { DiaryEntry, getDiaryEntry, saveDiaryEntry, getRecentEntries } from "@/lib/firebase/entries";
 import { getBucketList } from "@/lib/firebase/bucketList";
 import { getDictionary } from "@/lib/firebase/dictionary";
+import { getUserProfile } from "@/lib/firebase/profile";
 import { executeHuddleAction } from "@/app/actions";
 
 interface DiaryInputProps {
@@ -57,10 +58,11 @@ export function DiaryInput({ userId, date, onSave, onHuddleTrigger }: DiaryInput
 
     try {
       // 1. クライアント側でFirebaseからコンテキスト情報を取得
-      const [bucketList, dictionary, pastEntries] = await Promise.all([
+      const [bucketList, dictionary, pastEntries, userProfile] = await Promise.all([
         getBucketList(userId),
         getDictionary(userId),
-        getRecentEntries(userId, 5)
+        getRecentEntries(userId, 5),
+        getUserProfile(userId)
       ]);
 
       // 2. 文字列コンテキストに変換 (Timestampなどのオブジェクトをサーバーに渡さないため)
@@ -76,11 +78,24 @@ export function DiaryInput({ userId, date, onSave, onHuddleTrigger }: DiaryInput
         .map(e => `[${e.date}] ${e.rawText}`)
         .join("\n---\n");
 
+      let profileContext = "未登録";
+      if (userProfile) {
+        profileContext = `
+生年月日: ${userProfile.birthDate || "未登録"}
+出身地/居住地: ${userProfile.origin || "未登録"}
+出身校: ${userProfile.school || "未登録"}
+勤務先: ${userProfile.company || "未登録"}
+職種/仕事内容: ${userProfile.jobTitle || "未登録"}
+持病/アレルギー/健康上の注意点: ${userProfile.medicalHistory || "特になし"}
+        `.trim();
+      }
+
       // 3. Server ActionでGemini API呼び出し
       const result = await executeHuddleAction(text, {
         bucketListContext,
         dictionaryContext,
-        pastContext
+        pastContext,
+        profileContext
       });
 
       if (result.success && result.data) {

@@ -13,6 +13,8 @@ import { Column } from "@/components/layout/Column";
 import { logout } from "@/lib/firebase/auth";
 import { BucketListModal } from "@/components/features/BucketListModal";
 import { DictionaryModal } from "@/components/features/DictionaryModal";
+import { ProfileModal } from "@/components/features/ProfileModal";
+import { HealthCheckModal } from "@/components/features/HealthCheckModal";
 import { PhotoCuration } from "@/components/features/PhotoCuration";
 import { DiaryInput } from "@/components/features/DiaryInput";
 import { DiaryEntry, getDiaryEntry } from "@/lib/firebase/entries";
@@ -24,6 +26,8 @@ export default function HomeView() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [isBucketModalOpen, setIsBucketModalOpen] = useState(false);
   const [isDictModalOpen, setIsDictModalOpen] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [healthModalType, setHealthModalType] = useState<"morning" | "evening" | null>(null);
   const [isBackingUp, setIsBackingUp] = useState(false);
   const [entry, setEntry] = useState<DiaryEntry | null>(null);
 
@@ -120,28 +124,8 @@ Updated at: ${entry.updatedAt ? entry.updatedAt.toDate().toLocaleString() : "不
 
   const isToday = now ? isSameDay(selectedDate, now) : false;
 
-  const toggleHealthCheck = async (type: 'morning' | 'evening') => {
-    if (!user) return;
-    
-    // 現在のhealthDataを取得または初期化
-    const currentHealth = entry?.healthData || {};
-    const newHealth = {
-      ...currentHealth,
-      [type]: currentHealth[type] ? null : { mood: 1 } // シンプルにON/OFF。データがあれば削除、なければ作成。
-    };
-
-    try {
-      // lib/firebase/entries の saveDiaryEntry を利用
-      const { saveDiaryEntry } = await import("@/lib/firebase/entries");
-      await saveDiaryEntry({
-        userId: user.uid,
-        date: dateStr,
-        healthData: newHealth
-      });
-      fetchEntry(); // データを再取得して表示を更新
-    } catch (error) {
-      console.error("Failed to save health check:", error);
-    }
+  const handleHealthCheckClick = (type: 'morning' | 'evening') => {
+    setHealthModalType(type);
   };
 
   return (
@@ -204,10 +188,13 @@ Updated at: ${entry.updatedAt ? entry.updatedAt.toDate().toLocaleString() : "不
             <span>固有名詞辞書</span>
           </button>
           
-          <div className="flex items-center space-x-2 bg-white dark:bg-zinc-900 rounded-full pl-1 pr-3 py-1 border border-slate-200 dark:border-zinc-800 shadow-sm ml-2">
+          <button 
+            onClick={() => setIsProfileModalOpen(true)}
+            className="flex items-center space-x-2 bg-white dark:bg-zinc-900 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors rounded-full pl-1 pr-3 py-1 border border-slate-200 dark:border-zinc-800 shadow-sm ml-2 cursor-pointer"
+          >
             <img src={user.photoURL || ""} alt="" className="w-8 h-8 rounded-full border border-slate-200 dark:border-zinc-700" />
             <span className="text-sm font-medium text-slate-700 dark:text-slate-200">{user.displayName}</span>
-          </div>
+          </button>
           <button 
             onClick={handleLogout}
             className="p-2 rounded-full hover:bg-red-50 dark:hover:bg-red-900/20 text-slate-400 hover:text-red-500 transition-colors"
@@ -261,7 +248,7 @@ Updated at: ${entry.updatedAt ? entry.updatedAt.toDate().toLocaleString() : "不
           {/* Health Check Cards */}
           <div className="grid grid-cols-2 gap-3 mb-2">
             <button 
-              onClick={() => toggleHealthCheck('morning')}
+              onClick={() => handleHealthCheckClick('morning')}
               className={`glass-card flex flex-col items-center justify-center p-4 group transition-all hover:scale-[1.02] ${
                 entry?.healthData?.morning 
                   ? "bg-orange-500/20 border-orange-500/50 text-orange-600 dark:text-orange-400 shadow-lg shadow-orange-500/10" 
@@ -275,7 +262,7 @@ Updated at: ${entry.updatedAt ? entry.updatedAt.toDate().toLocaleString() : "不
               </div>
             </button>
             <button 
-              onClick={() => toggleHealthCheck('evening')}
+              onClick={() => handleHealthCheckClick('evening')}
               className={`glass-card flex flex-col items-center justify-center p-4 group transition-all hover:scale-[1.02] ${
                 entry?.healthData?.evening 
                   ? "bg-indigo-500/20 border-indigo-500/50 text-indigo-600 dark:text-indigo-400 shadow-lg shadow-indigo-500/10" 
@@ -406,6 +393,20 @@ Updated at: ${entry.updatedAt ? entry.updatedAt.toDate().toLocaleString() : "不
         userId={user.uid} 
         isOpen={isDictModalOpen} 
         onClose={() => setIsDictModalOpen(false)} 
+      />
+      <ProfileModal 
+        userId={user.uid} 
+        isOpen={isProfileModalOpen} 
+        onClose={() => setIsProfileModalOpen(false)} 
+      />
+      <HealthCheckModal 
+        userId={user.uid}
+        date={dateStr}
+        type={healthModalType}
+        currentData={healthModalType ? entry?.healthData?.[healthModalType] : undefined}
+        isOpen={healthModalType !== null}
+        onClose={() => setHealthModalType(null)}
+        onSaved={fetchEntry}
       />
     </main>
   );

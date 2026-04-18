@@ -22,9 +22,19 @@ export interface DiaryEntry {
     hobby: string;
   };
   healthData?: {
-    morning?: { temperature?: number; bloodPressure?: string; mood?: number };
-    evening?: { temperature?: number; bloodPressure?: string; mood?: number };
-    medsCompleted?: boolean;
+    morning?: { 
+      comment?: string;
+      weight?: number; 
+      bloodPressure?: string; // "上/下" の形式
+      sleepHours?: number;
+      medsCompleted?: boolean;
+    };
+    evening?: { 
+      comment?: string;
+      weight?: number; 
+      bloodPressure?: string; 
+      medsCompleted?: boolean;
+    };
   };
   responses: {
     c1?: string;

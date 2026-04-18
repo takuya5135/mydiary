@@ -10,13 +10,13 @@ export const metadata: Metadata = {
   description: "したたかに世渡りし、情熱的に遊び、家族を愛するための外部脳",
   icons: {
     icon: [
-      { url: "/favicon.ico", sizes: "any" },
-      { url: "/favicon-96x96.png", type: "image/png", sizes: "96x96" },
-      { url: "/favicon.svg", type: "image/svg+xml" },
+      { url: "/favicon.ico?v=3", sizes: "any" },
+      { url: "/favicon-96x96.png?v=3", type: "image/png", sizes: "96x96" },
+      { url: "/favicon.svg?v=3", type: "image/svg+xml" },
     ],
-    shortcut: ["/favicon.ico"],
+    shortcut: ["/favicon.ico?v=3"],
     apple: [
-      { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+      { url: "/apple-touch-icon.png?v=3", sizes: "180x180", type: "image/png" },
     ],
   },
   manifest: "/site.webmanifest",
