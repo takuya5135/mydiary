@@ -146,12 +146,35 @@ export default function HomeView() {
         </div>
       </header>
 
-      <div className="max-w-[1600px] w-full mx-auto mb-6 px-2">
+      <div className="max-w-[1600px] w-full mx-auto mb-4 px-2">
         <DiaryInput 
           userId={user.uid} 
           date={dateStr} 
           onSave={fetchEntry}
         />
+      </div>
+
+      {/* --- LIFE BAR (バケットリスト) --- */}
+      <div className="max-w-[1600px] w-full mx-auto mb-4 px-2">
+        <div
+          onClick={() => setIsBucketModalOpen(true)}
+          className="w-full cursor-pointer group flex items-center justify-between px-6 py-4 rounded-2xl border border-amber-200/60 dark:border-amber-700/40 bg-gradient-to-r from-amber-50 via-orange-50 to-yellow-50 dark:from-amber-950/40 dark:via-orange-950/30 dark:to-yellow-950/40 shadow-md hover:shadow-lg hover:scale-[1.005] transition-all"
+        >
+          <div className="flex items-center space-x-4">
+            <div className="bg-amber-100 dark:bg-amber-900/60 p-3 rounded-xl text-amber-600 dark:text-amber-400 shadow-inner">
+              <Trophy size={22} />
+            </div>
+            <div>
+              <p className="text-[10px] font-black tracking-[0.2em] text-amber-500 dark:text-amber-400 uppercase mb-0.5">Life</p>
+              <h2 className="text-sm font-black text-slate-800 dark:text-slate-100">死ぬまでにやりたいことリスト</h2>
+              <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">Home・Work・Hobby すべてを超えた、あなたの人生の目標</p>
+            </div>
+          </div>
+          <div className="flex items-center space-x-2">
+            <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/50 px-3 py-1 rounded-full hidden md:block">クリックして確認・編集</span>
+            <Plus size={22} className="text-amber-400 group-hover:text-amber-600 transition-transform group-hover:rotate-90" />
+          </div>
+        </div>
       </div>
       
       <div className="flex-1 max-w-[1600px] w-full mx-auto grid grid-cols-1 md:grid-cols-3 gap-6 min-h-0">
@@ -257,22 +280,6 @@ export default function HomeView() {
           className="animate-slide-up"
           style={{ animationDelay: '0.3s', animationFillMode: 'both' }}
         >
-           <div 
-             onClick={() => setIsBucketModalOpen(true)}
-             className="glass-card p-5 border-t-4 border-t-emerald-400 flex items-center justify-between group cursor-pointer hover:bg-emerald-500/5 transition-all"
-           >
-             <div className="flex items-center space-x-3">
-                <div className="bg-emerald-100 dark:bg-emerald-900/50 p-2.5 rounded-xl text-emerald-600 dark:text-emerald-400">
-                  <Trophy size={20} />
-                </div>
-                <div>
-                  <h3 className="text-sm font-black text-slate-800 dark:text-slate-100">死ぬまでにやりたいこと</h3>
-                  <p className="text-[10px] text-slate-500 font-medium">リストを確認・編集する</p>
-                </div>
-             </div>
-             <Plus size={20} className="text-slate-400 group-hover:text-emerald-500 transition-transform group-hover:rotate-90" />
-           </div>
-
            {entry?.segments.hobby && (
             <div className="glass-card p-4 mt-4 border-l-4 border-l-emerald-400">
                <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">
