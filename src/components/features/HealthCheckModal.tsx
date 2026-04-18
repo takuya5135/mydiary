@@ -38,13 +38,14 @@ export function HealthCheckModal({ userId, date, type, currentData, isOpen, onCl
     setSaving(true);
     
     try {
-      const dataToSave = {
+      const dataToSave: any = {
         comment,
-        weight: weight ? parseFloat(weight) : undefined,
-        bloodPressure: bp,
         medsCompleted: meds,
-        ...(type === "morning" && { sleepHours: sleep ? parseFloat(sleep) : undefined }),
       };
+      if (weight) dataToSave.weight = parseFloat(weight);
+      if (bp) dataToSave.bloodPressure = bp;
+      if (type === "morning" && sleep) Object.assign(dataToSave, { sleepHours: parseFloat(sleep) });
+
 
       // healthDataの部分更新を行う
       const { getDiaryEntry } = await import("@/lib/firebase/entries");

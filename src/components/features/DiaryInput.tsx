@@ -80,12 +80,15 @@ export function DiaryInput({ userId, date, onSave, onHuddleTrigger }: DiaryInput
 
       let profileContext = "未登録";
       if (userProfile) {
+        const historyStr = userProfile.history && userProfile.history.length > 0 
+          ? userProfile.history.map(h => `- ${h.from} 〜 ${h.to}: ${h.description}`).join("\n")
+          : "未登録";
+
         profileContext = `
 生年月日: ${userProfile.birthDate || "未登録"}
 出身地/居住地: ${userProfile.origin || "未登録"}
-出身校: ${userProfile.school || "未登録"}
-勤務先: ${userProfile.company || "未登録"}
-職種/仕事内容: ${userProfile.jobTitle || "未登録"}
+経歴/仕事:
+${historyStr}
 持病/アレルギー/健康上の注意点: ${userProfile.medicalHistory || "特になし"}
         `.trim();
       }

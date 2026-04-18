@@ -1,13 +1,18 @@
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "./config";
 
+export interface JobHistory {
+  id: string;
+  from: string;
+  to: string;
+  description: string;
+}
+
 export interface UserProfile {
   userId: string;
   birthDate?: string;
   origin?: string;
-  school?: string;
-  company?: string;
-  jobTitle?: string;
+  history?: JobHistory[];
   medicalHistory?: string; // 持病・アレルギーなど
   familyStructure?: string;
   memo?: string;
