@@ -1,9 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Image as ImageIcon, Camera, Check, Loader2, RefreshCcw } from "lucide-react";
-import { GooglePhoto } from "@/lib/google/photos";
-import { getPhotosAction } from "@/app/actions";
+import { Image as ImageIcon, Plus, Trash2, Link } from "lucide-react";
 import { saveDiaryEntry } from "@/lib/firebase/entries";
 
 interface PhotoCurationProps {
@@ -14,134 +12,103 @@ interface PhotoCurationProps {
 }
 
 export function PhotoCuration({ userId, date, selectedPhotoIds = [], onUpdate }: PhotoCurationProps) {
-  const [photos, setPhotos] = useState<GooglePhoto[]>([]);
-  const [loading, setLoading] = useState(false);
-  // 初期状態は「未ロード」。自動実行しない。
-  const [hasLoaded, setHasLoaded] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [photoUrl, setPhotoUrl] = useState("");
+  const [isAdding, setIsAdding] = useState(false);
 
-  // 手動ボタンを押したときのみ実行
-  const loadPhotos = async () => {
-    setLoading(true);
-    setError(null);
-    setHasLoaded(true);
-    try {
-      const result = await getPhotosAction(userId, date);
-      if (result.success) {
-        setPhotos(result.data || []);
-      } else {
-        setError(result.error || "写真の取得に失敗しました");
-      }
-    } catch {
-      setError("予期しないエラーが発生しました");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const togglePhoto = async (photoId: string) => {
-    const newSelectedIds = selectedPhotoIds.includes(photoId)
-      ? selectedPhotoIds.filter(id => id !== photoId)
-      : [...selectedPhotoIds, photoId];
-
+  const handleAddPhoto = async () => {
+    if (!photoUrl.trim()) return;
+    setIsAdding(true);
+    
+    const newPhotos = [...selectedPhotoIds, photoUrl.trim()];
+    
     try {
       await saveDiaryEntry({
         userId,
         date,
-        photos: newSelectedIds
+        photos: newPhotos
       });
+      setPhotoUrl("");
       onUpdate();
     } catch (err) {
-      console.error("Failed to update photo selection:", err);
+      console.error("Failed to add photo url:", err);
+    } finally {
+      setIsAdding(false);
     }
   };
 
-  // まだ読み込みボタンを押していない状態
-  if (!hasLoaded) {
-    return (
-      <div className="p-4 text-center bg-slate-50 dark:bg-zinc-900/40 rounded-2xl border border-dashed border-slate-200 dark:border-zinc-800">
-        <Camera size={24} className="mx-auto mb-2 text-slate-300 opacity-50" />
-        <button
-          onClick={loadPhotos}
-          className="text-xs text-orange-500 hover:text-orange-600 font-bold transition-colors"
-        >
-          Google フォトから写真を読み込む
-        </button>
-      </div>
-    );
-  }
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center p-8 text-slate-400">
-        <Loader2 size={24} className="animate-spin mr-2" />
-        <span className="text-xs font-medium">写真を読み込み中...</span>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="p-4 rounded-xl bg-red-50/50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/50 text-center">
-        <p className="text-[10px] text-red-500 mb-2">{error}</p>
-        <button
-          onClick={loadPhotos}
-          className="text-xs flex items-center justify-center mx-auto text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition-colors"
-        >
-          <RefreshCcw size={12} className="mr-1" />
-          再試行
-        </button>
-      </div>
-    );
-  }
-
-  if (photos.length === 0) {
-    return (
-      <div className="p-8 text-center bg-slate-50 dark:bg-zinc-900/40 rounded-2xl border border-dashed border-slate-200 dark:border-zinc-800">
-        <Camera size={32} className="mx-auto mb-2 text-slate-300 opacity-50" />
-        <p className="text-xs text-slate-400">この日の写真はありません</p>
-      </div>
-    );
-  }
+  const handleRemovePhoto = async (urlToRemove: string) => {
+    const newPhotos = selectedPhotoIds.filter(url => url !== urlToRemove);
+    try {
+      await saveDiaryEntry({
+        userId,
+        date,
+        photos: newPhotos
+      });
+      onUpdate();
+    } catch (err) {
+      console.error("Failed to remove photo:", err);
+    }
+  };
 
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between px-1">
         <h3 className="text-[10px] uppercase tracking-wider text-slate-500 font-bold flex items-center">
           <ImageIcon size={14} className="mr-1.5 text-orange-500" />
-          今日のフォトキュレーション
+          今日のフォト
         </h3>
-        <span className="text-[10px] text-slate-400">{photos.length}件の候補</span>
+        <span className="text-[10px] text-slate-400">{selectedPhotoIds.length}枚</span>
       </div>
 
-      <div className="grid grid-cols-3 gap-2">
-        {photos.map(photo => {
-          const isSelected = selectedPhotoIds.includes(photo.id);
-          return (
-            <div
-              key={photo.id}
-              onClick={() => togglePhoto(photo.id)}
-              className="relative aspect-square rounded-lg overflow-hidden cursor-pointer group shadow-sm bg-slate-200 dark:bg-zinc-800"
-            >
-              <img
-                src={`${photo.baseUrl}=w300-h300-c`}
-                alt=""
-                className={`w-full h-full object-cover transition-all duration-300 ${
-                  isSelected ? "opacity-100 scale-100" : "opacity-60 scale-105 grayscale-[40%]"
-                } group-hover:opacity-100 group-hover:scale-100`}
-              />
-              <div className={`absolute top-1.5 right-1.5 w-5 h-5 rounded-full flex items-center justify-center transition-all ${
-                isSelected ? "bg-orange-500 text-white scale-100 shadow-lg" : "bg-black/40 text-white/50 scale-0"
-              }`}>
-                <Check size={12} strokeWidth={4} />
-              </div>
-              {!isSelected && (
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
-              )}
-            </div>
-          );
-        })}
+      <div className="flex space-x-2">
+        <div className="relative flex-1">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <Link size={14} className="text-slate-400" />
+          </div>
+          <input
+            type="url"
+            value={photoUrl}
+            onChange={(e) => setPhotoUrl(e.target.value)}
+            placeholder="画像のURLを貼り付け..."
+            className="block w-full pl-8 pr-3 py-2 text-xs bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500/50"
+          />
+        </div>
+        <button
+          onClick={handleAddPhoto}
+          disabled={!photoUrl.trim() || isAdding}
+          className="flex-shrink-0 px-3 py-2 bg-orange-100 text-orange-600 dark:bg-orange-900/40 dark:text-orange-400 rounded-lg hover:bg-orange-200 transition-colors disabled:opacity-50 flex items-center justify-center font-bold text-xs"
+        >
+          {isAdding ? "追加中..." : <Plus size={16} />}
+        </button>
       </div>
+
+      {selectedPhotoIds.length > 0 && (
+        <div className="grid grid-cols-3 gap-2 mt-4">
+          {selectedPhotoIds.map((url, idx) => (
+            <div
+              key={idx}
+              className="relative aspect-square rounded-lg overflow-hidden group shadow-sm bg-slate-200 dark:bg-zinc-800"
+            >
+              {/* @next/next/no-img-element を無効化して利用 */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={url}
+                alt="追加された写真"
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = "https://via.placeholder.com/300?text=Error";
+                }}
+              />
+              <button
+                onClick={() => handleRemovePhoto(url)}
+                className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-red-500 transition-all"
+              >
+                <Trash2 size={12} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

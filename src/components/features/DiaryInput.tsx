@@ -2,7 +2,9 @@
 
 import React, { useState, useEffect } from "react";
 import { Send, Mic, Sparkles, Loader2, Save } from "lucide-react";
-import { DiaryEntry, getDiaryEntry, saveDiaryEntry } from "@/lib/firebase/entries";
+import { DiaryEntry, getDiaryEntry, saveDiaryEntry, getRecentEntries } from "@/lib/firebase/entries";
+import { getBucketList } from "@/lib/firebase/bucketList";
+import { getDictionary } from "@/lib/firebase/dictionary";
 import { executeHuddleAction } from "@/app/actions";
 
 interface DiaryInputProps {
@@ -37,6 +39,9 @@ export function DiaryInput({ userId, date, onSave, onHuddleTrigger }: DiaryInput
         date,
         rawText: text
       });
+      // 保存したあと親のStateを更新させる
+      const current = await getDiaryEntry(userId, date);
+      if (current && onSave) onSave(current);
     } catch (error) {
       console.error("Save failed:", error);
     } finally {
@@ -51,14 +56,53 @@ export function DiaryInput({ userId, date, onSave, onHuddleTrigger }: DiaryInput
     if (onHuddleTrigger) onHuddleTrigger();
 
     try {
-      const result = await executeHuddleAction(userId, date, text);
-      if (result.success) {
-        if (onSave) onSave(result.data as any);
+      // 1. クライアント側でFirebaseからコンテキスト情報を取得
+      const [bucketList, dictionary, pastEntries] = await Promise.all([
+        getBucketList(userId),
+        getDictionary(userId),
+        getRecentEntries(userId, 5)
+      ]);
+
+      // 2. 文字列コンテキストに変換 (Timestampなどのオブジェクトをサーバーに渡さないため)
+      const bucketListContext = bucketList
+        .map((item, i) => `${i + 1}. ${item.title}${item.completed ? " (達成済)" : ""}`)
+        .join("\n");
+
+      const dictionaryContext = dictionary
+        .map(item => `- ${item.name} (${item.aliases.join(", ")}): ${item.attributes?.memo || ""} ${item.category === "person" ? `(生年: ${item.attributes?.birthYear || "不明"}, 出身: ${item.attributes?.origin || "不明"})` : ""}`)
+        .join("\n");
+
+      const pastContext = pastEntries
+        .map(e => `[${e.date}] ${e.rawText}`)
+        .join("\n---\n");
+
+      // 3. Server ActionでGemini API呼び出し
+      const result = await executeHuddleAction(text, {
+        bucketListContext,
+        dictionaryContext,
+        pastContext
+      });
+
+      if (result.success && result.data) {
+        // 4. クライアント側でFirestoreに保存
+        await saveDiaryEntry({
+          userId,
+          date,
+          rawText: text,
+          segments: result.data.segments,
+          responses: result.data.responses
+        });
+
+        // 5. 更新を親コンポーネントに通知
+        const updatedEntry = await getDiaryEntry(userId, date);
+        if (updatedEntry && onSave) onSave(updatedEntry);
+
       } else {
         alert("AI会議に失敗しました: " + result.error);
       }
     } catch (error) {
       console.error("Huddle execution error:", error);
+      alert("通信エラーが発生しました");
     } finally {
       setIsHuddling(false);
     }

@@ -1,7 +1,4 @@
 import { getGeminiModel } from "./gemini";
-import { BucketItem } from "../firebase/bucketList";
-import { DiaryEntry } from "../firebase/entries";
-import { DictionaryItem } from "../firebase/dictionary";
 
 export interface HuddleResult {
   segments: {
@@ -18,25 +15,12 @@ export interface HuddleResult {
 }
 
 export const runAIHuddle = async (
-  userId: string, 
   rawText: string, 
-  pastEntries: DiaryEntry[],
-  bucketList: BucketItem[],
-  dictionary: DictionaryItem[]
+  pastContext: string,
+  bucketListContext: string,
+  dictionaryContext: string
 ): Promise<HuddleResult> => {
   const model = getGeminiModel();
-
-  const bucketListContext = bucketList
-    .map((item, i) => `${i + 1}. ${item.title}${item.completed ? " (達成済)" : ""}`)
-    .join("\n");
-
-  const dictionaryContext = dictionary
-    .map(item => `- ${item.name} (${item.aliases.join(", ")}): ${item.attributes?.memo || ""} ${item.category === "person" ? `(生年: ${item.attributes?.birthYear || "不明"}, 出身: ${item.attributes?.origin || "不明"})` : ""}`)
-    .join("\n");
-
-  const pastContext = pastEntries
-    .map(e => `[${e.date}] ${e.rawText}`)
-    .join("\n---\n");
 
   const prompt = `
 あなたは、ユーザーの人生の質（QOL）を最大化するための4人のAIエージェントによる「チャンピオンメーカー・チーム」です。

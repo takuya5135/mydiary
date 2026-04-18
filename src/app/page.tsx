@@ -30,14 +30,52 @@ export default function HomeView() {
   const dateStr = format(selectedDate, "yyyy-MM-dd");
 
   const handleBackup = async () => {
-    if (!user) return;
+    if (!user || !entry) return;
     setIsBackingUp(true);
-    const result = await backupToDriveAction(user.uid, dateStr);
-    setIsBackingUp(false);
-    if (result.success) {
-      alert("Google Driveへのバックアップが完了しました！");
-    } else {
-      alert("バックアップに失敗しました: " + result.error);
+
+    try {
+      // @ts-ignore
+      const { getUserToken } = await import("@/lib/firebase/tokens");
+      const token = await getUserToken(user.uid);
+      if (!token) {
+        alert("Google認証情報を取得できませんでした。再度ログインしてください。");
+        setIsBackingUp(false);
+        return;
+      }
+
+      const mdContent = `
+# ${dateStr} (my日記)
+
+## 記録内容
+### Home
+${entry.segments?.home || "なし"}
+
+### Work
+${entry.segments?.work || "なし"}
+
+### Hobby
+${entry.segments?.hobby || "なし"}
+
+## 原文
+${entry.rawText}
+
+---
+Updated at: ${entry.updatedAt ? entry.updatedAt.toDate().toLocaleString() : "不明"}
+`.trim();
+
+      const fileName = `${dateStr}_diary.md`;
+      const result = await backupToDriveAction(token, fileName, mdContent);
+      
+      if (result.success) {
+        alert("Google Driveへのバックアップが完了しました！");
+      } else {
+        alert("バックアップに失敗しました: " + result.error);
+      }
+    } catch (error) {
+      console.error(error);
+      alert("予期しない通信エラーが発生しました。");
+    } finally {
+      setIsBackingUp(false);
     }
   };
 
