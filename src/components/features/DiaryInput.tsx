@@ -4,9 +4,11 @@ import React, { useState, useEffect } from "react";
 import { Send, Mic, Sparkles, Loader2, Save } from "lucide-react";
 import { DiaryEntry, getDiaryEntry, saveDiaryEntry, getRecentEntries } from "@/lib/firebase/entries";
 import { getBucketList } from "@/lib/firebase/bucketList";
-import { getDictionary } from "@/lib/firebase/dictionary";
+import { getDictionary, upsertDictionaryItem } from "@/lib/firebase/dictionary";
 import { getUserProfile } from "@/lib/firebase/profile";
 import { organizeDiaryAction } from "@/app/actions";
+import { DictionarySuggestion } from "@/lib/ai/huddle";
+import { BookPlus, CheckCircle, Plus } from "lucide-react";
 
 interface DiaryInputProps {
   userId: string;
@@ -19,6 +21,8 @@ export function DiaryInput({ userId, date, onSave, onOrganizeTrigger }: DiaryInp
   const [text, setText] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [isOrganizing, setIsOrganizing] = useState(false);
+  const [suggestions, setSuggestions] = useState<DictionarySuggestion[]>([]);
+  const [registeredIds, setRegisteredIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     const fetchEntry = async () => {
@@ -80,6 +84,14 @@ export function DiaryInput({ userId, date, onSave, onOrganizeTrigger }: DiaryInp
           segments: result.data,
           // responsesはもうAIに生成させないため更新しない
         });
+        
+        // 4.5 提案をセット
+        if (result.data.dictionarySuggestions && result.data.dictionarySuggestions.length > 0) {
+          setSuggestions(result.data.dictionarySuggestions);
+          setRegisteredIds(new Set());
+        } else {
+          setSuggestions([]);
+        }
 
         // 5. 更新を親コンポーネントに通知
         const updatedEntry = await getDiaryEntry(userId, date);
@@ -93,6 +105,23 @@ export function DiaryInput({ userId, date, onSave, onOrganizeTrigger }: DiaryInp
       alert("通信エラーが発生しました");
     } finally {
       setIsOrganizing(false);
+    }
+  };
+
+  const handleRegisterSuggestion = async (suggestion: DictionarySuggestion, index: number) => {
+    try {
+      await upsertDictionaryItem(userId, {
+        name: suggestion.name,
+        category: suggestion.category,
+        aliases: [],
+        attributes: {
+          memo: suggestion.memo
+        }
+      });
+      setRegisteredIds(prev => new Set([...prev, suggestion.name]));
+    } catch (error) {
+      console.error("Suggestion registration failed:", error);
+      alert("登録に失敗しました");
     }
   };
 
@@ -141,6 +170,44 @@ export function DiaryInput({ userId, date, onSave, onOrganizeTrigger }: DiaryInp
           <span>AIで日記を整理・構造化</span>
         </button>
       </div>
+
+      {/* --- DICTIONARY SUGGESTIONS --- */}
+      {suggestions.length > 0 && (
+        <div className="mt-4 p-4 rounded-xl bg-orange-50/50 dark:bg-orange-950/20 border border-orange-100/50 dark:border-orange-900/30 animate-in fade-in slide-in-from-top-2 duration-300">
+          <div className="flex items-center space-x-2 mb-3">
+            <BookPlus size={14} className="text-orange-500" />
+            <h3 className="text-[10px] font-black tracking-widest text-orange-600 dark:text-orange-400 uppercase">AI Dictionary Suggestions</h3>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {suggestions.map((suggestion, idx) => {
+              const isRegistered = registeredIds.has(suggestion.name);
+              return (
+                <button
+                  key={idx}
+                  onClick={() => !isRegistered && handleRegisterSuggestion(suggestion, idx)}
+                  disabled={isRegistered}
+                  className={`flex items-center space-x-2 px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all ${
+                    isRegistered 
+                      ? "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800" 
+                      : "bg-white dark:bg-zinc-800 text-slate-700 dark:text-slate-200 border border-orange-200 dark:border-orange-800 hover:border-orange-400 dark:hover:border-orange-600 shadow-sm"
+                  }`}
+                >
+                  <span className="opacity-60">{suggestion.category === 'person' ? '👤' : suggestion.category === 'place' ? '📍' : suggestion.category === 'organization' ? '🏢' : '🏷️'}</span>
+                  <span>{suggestion.name}</span>
+                  {isRegistered ? <CheckCircle size={12} /> : <Plus size={12} className="text-orange-500" />}
+                </button>
+              );
+            })}
+            <button 
+              onClick={() => setSuggestions([])}
+              className="px-2 py-1.5 text-[10px] font-bold text-slate-400 hover:text-slate-600 transition-colors"
+            >
+              閉じる
+            </button>
+          </div>
+          <p className="text-[9px] text-orange-400 mt-2 ml-1">※AIが未登録の重要語句を見つけました。クリックすると辞書に登録されます。</p>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,10 +1,17 @@
 import { getGeminiModel } from "./gemini";
 import { ChatMessage } from "../firebase/chat";
 
+export interface DictionarySuggestion {
+  name: string;
+  category: "person" | "place" | "organization" | "custom";
+  memo: string;
+}
+
 export interface OrganizeResult {
   home: string;
   work: string;
   hobby: string;
+  dictionarySuggestions: DictionarySuggestion[];
 }
 
 export const organizeDiary = async (
@@ -30,12 +37,16 @@ ${dictionaryContext || "未登録"}
 1. 「Home（家庭や生活）」、「Work（仕事やキャリア）」、「Hobby（趣味や自己研鑽・バケットリスト）」に関わる内容に仕分けてください。
 2. そのカテゴリに該当する内容が無い場合は空文字（""）にしてください。
 3. 文体は「だ・である」調（常体）で、日記らしく非常に簡潔に整形してください。「〜だ」「〜と感じた」「〜だと思う」といった表現を使い、です・ます調は厳禁とします。不要な接続詞も省き、箇条書きに近い簡潔さを心がけてください。AIの意見やコメントは絶対に含めず、ユーザーが記録した事実と感情のみをきれいに整理してください。
+4. **辞書への追加提案**: 入力されたテキストの中に、上記の「固有名詞辞書」に**まだ登録されていない**が、今後も登場しそうな重要な固有名詞（人名、会社名、店名、プロジェクト名など）があれば、それらを抽出してリストアップしてください。
 
 ### 出力フォーマット (JSON形式のみ):
 {
   "home": "家庭・生活に関する整理されたテキスト",
   "work": "仕事に関する整理されたテキスト",
-  "hobby": "趣味に関する整理されたテキスト"
+  "hobby": "趣味に関する整理されたテキスト",
+  "dictionarySuggestions": [
+    { "name": "名称", "category": "person/place/organization/custom", "memo": "簡単な説明や属性" }
+  ]
 }
 `;
 

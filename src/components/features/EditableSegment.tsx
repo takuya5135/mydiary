@@ -88,11 +88,16 @@ export function EditableSegment({ initialValue, onSave, placeholder, theme }: Ed
 
   return (
     <div className="group relative">
-      <div className="glass-card p-4">
+      <div className="glass-card p-4 min-h-[60px]">
         {value ? (
-          <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">
-            {value}
-          </p>
+          <ul className="space-y-2">
+            {value.split('\n').filter(line => line.trim()).map((line, idx) => (
+              <li key={idx} className="text-sm text-slate-700 dark:text-slate-300 flex items-start">
+                <span className="mr-2 text-slate-400 mt-1.5 h-1 w-1 rounded-full bg-slate-300 flex-shrink-0" />
+                <span className="leading-relaxed">{line.replace(/^[-\*\s・]+/, "")}</span>
+              </li>
+            ))}
+          </ul>
         ) : (
           <p className="text-sm text-slate-400 italic opacity-50 py-2">
             データがありません

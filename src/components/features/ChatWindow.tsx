@@ -121,9 +121,9 @@ export function ChatWindow({ userId, dateStr }: ChatWindowProps) {
       } else {
         alert("エラーが発生しました: " + result.error);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      alert("通信エラー");
+      alert("通信エラーが発生しました: " + (error.message || "詳細不明"));
     } finally {
       setIsLoading(false);
     }

@@ -18,6 +18,7 @@ import { HealthCheckModal } from "@/components/features/HealthCheckModal";
 import { PhotoCuration } from "@/components/features/PhotoCuration";
 import { DiaryInput } from "@/components/features/DiaryInput";
 import { EditableSegment } from "@/components/features/EditableSegment";
+import { CalendarStrip } from "@/components/features/CalendarStrip";
 import { ChatWindow } from "@/components/features/ChatWindow";
 import { DiaryEntry, getDiaryEntry, saveDiaryEntry } from "@/lib/firebase/entries";
 import { backupToDriveAction } from "@/app/actions";
@@ -254,6 +255,11 @@ Updated at: ${entry.updatedAt ? entry.updatedAt.toDate().toLocaleString() : "不
             <Plus size={22} className="text-amber-400 group-hover:text-amber-600 transition-transform group-hover:rotate-90" />
           </div>
         </div>
+      </div>
+
+      {/* --- CALENDAR STRIP --- */}
+      <div className="max-w-[1600px] w-full mx-auto mb-6 px-2">
+        {user && <CalendarStrip userId={user.uid} date={dateStr} />}
       </div>
       
       <div className="flex-1 max-w-[1600px] w-full mx-auto grid grid-cols-1 md:grid-cols-3 gap-6 min-h-0">
