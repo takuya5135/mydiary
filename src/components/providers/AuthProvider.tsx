@@ -28,7 +28,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <AuthContext.Provider value={{ user, loading }}>
-      {!loading && children}
+      {/* ローディング中は子要素をnullにせず、スピナーを表示してEdgeのエラー誤判定を防ぐ */}
+      {loading ? (
+        <div className="h-screen w-full flex items-center justify-center bg-slate-950">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-orange-500" />
+        </div>
+      ) : (
+        children
+      )}
     </AuthContext.Provider>
   );
 };
