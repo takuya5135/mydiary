@@ -12,7 +12,8 @@ export const loginWithGoogle = async () => {
   const provider = new GoogleAuthProvider();
   // Add necessary scopes for Phase 3
   provider.addScope("https://www.googleapis.com/auth/drive.file");
-  provider.addScope("https://www.googleapis.com/auth/photolibrary.readonly");
+  // NOTE: photolibrary.readonly はGoogleの審査が必要なため一旦無効化
+  // provider.addScope("https://www.googleapis.com/auth/photolibrary.readonly");
   
   try {
     const result = await signInWithPopup(auth, provider);
