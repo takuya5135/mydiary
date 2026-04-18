@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Image as ImageIcon, Camera, Check, Loader2, RefreshCcw } from "lucide-react";
 import { GooglePhoto } from "@/lib/google/photos";
 import { getPhotosAction } from "@/app/actions";
@@ -16,24 +16,24 @@ interface PhotoCurationProps {
 export function PhotoCuration({ userId, date, selectedPhotoIds = [], onUpdate }: PhotoCurationProps) {
   const [photos, setPhotos] = useState<GooglePhoto[]>([]);
   const [loading, setLoading] = useState(false);
+  // 初期状態は「未ロード」。自動実行しない。
+  const [hasLoaded, setHasLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadPhotos();
-  }, [userId, date]);
-
+  // 手動ボタンを押したときのみ実行
   const loadPhotos = async () => {
     setLoading(true);
     setError(null);
+    setHasLoaded(true);
     try {
       const result = await getPhotosAction(userId, date);
       if (result.success) {
         setPhotos(result.data || []);
       } else {
-        setError(result.error || "Failed to load photos");
+        setError(result.error || "写真の取得に失敗しました");
       }
-    } catch (err) {
-      setError("An unexpected error occurred");
+    } catch {
+      setError("予期しないエラーが発生しました");
     } finally {
       setLoading(false);
     }
@@ -56,6 +56,21 @@ export function PhotoCuration({ userId, date, selectedPhotoIds = [], onUpdate }:
     }
   };
 
+  // まだ読み込みボタンを押していない状態
+  if (!hasLoaded) {
+    return (
+      <div className="p-4 text-center bg-slate-50 dark:bg-zinc-900/40 rounded-2xl border border-dashed border-slate-200 dark:border-zinc-800">
+        <Camera size={24} className="mx-auto mb-2 text-slate-300 opacity-50" />
+        <button
+          onClick={loadPhotos}
+          className="text-xs text-orange-500 hover:text-orange-600 font-bold transition-colors"
+        >
+          Google フォトから写真を読み込む
+        </button>
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8 text-slate-400">
@@ -69,7 +84,7 @@ export function PhotoCuration({ userId, date, selectedPhotoIds = [], onUpdate }:
     return (
       <div className="p-4 rounded-xl bg-red-50/50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/50 text-center">
         <p className="text-[10px] text-red-500 mb-2">{error}</p>
-        <button 
+        <button
           onClick={loadPhotos}
           className="text-xs flex items-center justify-center mx-auto text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition-colors"
         >
@@ -98,19 +113,19 @@ export function PhotoCuration({ userId, date, selectedPhotoIds = [], onUpdate }:
         </h3>
         <span className="text-[10px] text-slate-400">{photos.length}件の候補</span>
       </div>
-      
+
       <div className="grid grid-cols-3 gap-2">
         {photos.map(photo => {
           const isSelected = selectedPhotoIds.includes(photo.id);
           return (
-            <div 
+            <div
               key={photo.id}
               onClick={() => togglePhoto(photo.id)}
               className="relative aspect-square rounded-lg overflow-hidden cursor-pointer group shadow-sm bg-slate-200 dark:bg-zinc-800"
             >
-              <img 
-                src={`${photo.baseUrl}=w300-h300-c`} 
-                alt="" 
+              <img
+                src={`${photo.baseUrl}=w300-h300-c`}
+                alt=""
                 className={`w-full h-full object-cover transition-all duration-300 ${
                   isSelected ? "opacity-100 scale-100" : "opacity-60 scale-105 grayscale-[40%]"
                 } group-hover:opacity-100 group-hover:scale-100`}
