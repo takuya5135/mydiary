@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { MessageCircle, X, Send, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChatMessage, getRecentChatMessages } from "@/lib/firebase/chat";
+import { ChatMessage, getRecentChatMessages, saveChatMessage } from "@/lib/firebase/chat";
 import { chatWithAIAction } from "@/app/actions";
 import { getBucketList } from "@/lib/firebase/bucketList";
 import { getDictionary } from "@/lib/firebase/dictionary";
@@ -61,6 +61,9 @@ export function ChatWindow({ userId, dateStr }: ChatWindowProps) {
     setIsLoading(true);
 
     try {
+      // ユーザーのメッセージをFirestoreに保存（クライアント側なのでAuthが有効）
+      await saveChatMessage(userId, "user", userMessage);
+
       // コンテキストの取得
       const [bucketList, dictionary, profile, todaysEntry] = await Promise.all([
         getBucketList(userId),
@@ -105,6 +108,9 @@ export function ChatWindow({ userId, dateStr }: ChatWindowProps) {
       );
 
       if (result.success && result.reply) {
+        // AIの返信をFirestoreに保存
+        await saveChatMessage(userId, "model", result.reply);
+
         const tempAiMsg: ChatMessage = {
           role: "model",
           content: result.reply,

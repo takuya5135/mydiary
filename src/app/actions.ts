@@ -62,9 +62,6 @@ export async function chatWithAIAction(
   dateStr: string
 ) {
   try {
-    // ユーザーのメッセージを保存
-    await saveChatMessage(userId, "user", message);
-
     // カレンダーの予定を取得
     let calendarContext = "予定なし";
     if (googleToken) {
@@ -86,9 +83,7 @@ export async function chatWithAIAction(
       contextStrings.todaysDiaryContext
     );
 
-    // AIの返信を保存
-    await saveChatMessage(userId, "model", replyText);
-
+    // AIの返信を返すだけにする（保存はクライアント側で行う）
     return { success: true, reply: replyText };
   } catch (error: any) {
     console.error("chatWithAIAction failed:", error);
