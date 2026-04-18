@@ -6,19 +6,19 @@ import { DiaryEntry, getDiaryEntry, saveDiaryEntry, getRecentEntries } from "@/l
 import { getBucketList } from "@/lib/firebase/bucketList";
 import { getDictionary } from "@/lib/firebase/dictionary";
 import { getUserProfile } from "@/lib/firebase/profile";
-import { executeHuddleAction } from "@/app/actions";
+import { organizeDiaryAction } from "@/app/actions";
 
 interface DiaryInputProps {
   userId: string;
   date: string;
   onSave?: (entry: DiaryEntry) => void;
-  onHuddleTrigger?: () => void;
+  onOrganizeTrigger?: () => void;
 }
 
-export function DiaryInput({ userId, date, onSave, onHuddleTrigger }: DiaryInputProps) {
+export function DiaryInput({ userId, date, onSave, onOrganizeTrigger }: DiaryInputProps) {
   const [text, setText] = useState("");
   const [isSaving, setIsSaving] = useState(false);
-  const [isHuddling, setIsHuddling] = useState(false);
+  const [isOrganizing, setIsOrganizing] = useState(false);
 
   useEffect(() => {
     const fetchEntry = async () => {
@@ -50,55 +50,25 @@ export function DiaryInput({ userId, date, onSave, onHuddleTrigger }: DiaryInput
     }
   };
 
-  const handleHuddle = async () => {
-    if (!text.trim() || isHuddling) return;
+  const handleOrganize = async () => {
+    if (!text.trim() || isOrganizing) return;
     
-    setIsHuddling(true);
-    if (onHuddleTrigger) onHuddleTrigger();
+    setIsOrganizing(true);
+    if (onOrganizeTrigger) onOrganizeTrigger();
 
     try {
       // 1. クライアント側でFirebaseからコンテキスト情報を取得
-      const [bucketList, dictionary, pastEntries, userProfile] = await Promise.all([
-        getBucketList(userId),
+      const [dictionary] = await Promise.all([
         getDictionary(userId),
-        getRecentEntries(userId, 5),
-        getUserProfile(userId)
       ]);
 
-      // 2. 文字列コンテキストに変換 (Timestampなどのオブジェクトをサーバーに渡さないため)
-      const bucketListContext = bucketList
-        .map((item, i) => `${i + 1}. ${item.title}${item.completed ? " (達成済)" : ""}`)
-        .join("\n");
-
       const dictionaryContext = dictionary
-        .map(item => `- ${item.name} (${item.aliases.join(", ")}): ${item.attributes?.memo || ""} ${item.category === "person" ? `(生年: ${item.attributes?.birthYear || "不明"}, 出身: ${item.attributes?.origin || "不明"})` : ""}`)
+        .map(item => `- ${item.name} (${item.aliases.join(", ")}): ${item.attributes?.memo || ""}`)
         .join("\n");
-
-      const pastContext = pastEntries
-        .map(e => `[${e.date}] ${e.rawText}`)
-        .join("\n---\n");
-
-      let profileContext = "未登録";
-      if (userProfile) {
-        const historyStr = userProfile.history && userProfile.history.length > 0 
-          ? userProfile.history.map(h => `- ${h.from} 〜 ${h.to}: ${h.description}`).join("\n")
-          : "未登録";
-
-        profileContext = `
-生年月日: ${userProfile.birthDate || "未登録"}
-出身地/居住地: ${userProfile.origin || "未登録"}
-経歴/仕事:
-${historyStr}
-持病/アレルギー/健康上の注意点: ${userProfile.medicalHistory || "特になし"}
-        `.trim();
-      }
 
       // 3. Server ActionでGemini API呼び出し
-      const result = await executeHuddleAction(text, {
-        bucketListContext,
+      const result = await organizeDiaryAction(text, {
         dictionaryContext,
-        pastContext,
-        profileContext
       });
 
       if (result.success && result.data) {
@@ -107,8 +77,8 @@ ${historyStr}
           userId,
           date,
           rawText: text,
-          segments: result.data.segments,
-          responses: result.data.responses
+          segments: result.data,
+          // responsesはもうAIに生成させないため更新しない
         });
 
         // 5. 更新を親コンポーネントに通知
@@ -116,13 +86,13 @@ ${historyStr}
         if (updatedEntry && onSave) onSave(updatedEntry);
 
       } else {
-        alert("AI会議に失敗しました:\n\n" + result.error + "\n\n※正しいモデル名が一覧にある場合は、gemini.tsのモデル名を修正してください。");
+        alert("整理に失敗しました:\n\n" + result.error);
       }
     } catch (error) {
-      console.error("Huddle execution error:", error);
+      console.error("Organize execution error:", error);
       alert("通信エラーが発生しました");
     } finally {
-      setIsHuddling(false);
+      setIsOrganizing(false);
     }
   };
 
@@ -159,16 +129,16 @@ ${historyStr}
         </button>
 
         <button 
-          onClick={handleHuddle}
-          disabled={!text.trim() || isHuddling}
+          onClick={handleOrganize}
+          disabled={!text.trim() || isOrganizing}
           className="flex items-center space-x-2 px-6 py-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-600 text-white text-sm font-bold shadow-lg shadow-orange-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:scale-100"
         >
-          {isHuddling ? (
+          {isOrganizing ? (
             <Loader2 size={18} className="animate-spin" />
           ) : (
             <Sparkles size={18} />
           )}
-          <span>Huddle (AI会議) を開始</span>
+          <span>AIで日記を整理・構造化</span>
         </button>
       </div>
     </div>

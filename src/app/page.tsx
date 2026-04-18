@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { 
-  Home, Briefcase, Heart, Sun, Moon, ShieldCheck, CheckCircle2, Trophy, Plus, LogOut, 
+  Home, Briefcase, Heart, Sun, Moon, Trophy, Plus, LogOut, CheckCircle2,
   ChevronLeft, ChevronRight, Calendar as CalendarIcon, Book, CloudUpload
 } from "lucide-react";
 import { format, addDays, subDays, isSameDay } from "date-fns";
@@ -17,7 +17,9 @@ import { ProfileModal } from "@/components/features/ProfileModal";
 import { HealthCheckModal } from "@/components/features/HealthCheckModal";
 import { PhotoCuration } from "@/components/features/PhotoCuration";
 import { DiaryInput } from "@/components/features/DiaryInput";
-import { DiaryEntry, getDiaryEntry } from "@/lib/firebase/entries";
+import { EditableSegment } from "@/components/features/EditableSegment";
+import { ChatWindow } from "@/components/features/ChatWindow";
+import { DiaryEntry, getDiaryEntry, saveDiaryEntry } from "@/lib/firebase/entries";
 import { backupToDriveAction } from "@/app/actions";
 
 export default function HomeView() {
@@ -126,6 +128,21 @@ Updated at: ${entry.updatedAt ? entry.updatedAt.toDate().toLocaleString() : "不
 
   const handleHealthCheckClick = (type: 'morning' | 'evening') => {
     setHealthModalType(type);
+  };
+
+  const handleSaveSegment = async (theme: 'home' | 'work' | 'hobby', value: string) => {
+    if (!user || !entry) return;
+    const newSegments = {
+      ...(entry.segments || { home: "", work: "", hobby: "" }),
+      [theme]: value
+    };
+    await saveDiaryEntry({
+      userId: user.uid,
+      date: dateStr,
+      // @ts-ignore
+      segments: newSegments
+    });
+    fetchEntry();
   };
 
   return (
@@ -277,33 +294,14 @@ Updated at: ${entry.updatedAt ? entry.updatedAt.toDate().toLocaleString() : "不
             </button>
           </div>
 
-          <div className="glass-card p-4 relative overflow-hidden animate-float">
-            <div className="absolute top-0 right-0 w-16 h-16 bg-blue-500/10 rounded-bl-full" />
-            <div className="flex items-start space-x-3">
-              <div className="bg-blue-100 dark:bg-blue-900/40 p-2 rounded-full text-blue-600 dark:text-blue-400 mt-1">
-                <ShieldCheck size={20} />
-              </div>
-              <div className="flex-1">
-                <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 mb-1 flex items-center">
-                  マモの報告 (リスク管理者)
-                  <span className={`ml-2 w-2 h-2 rounded-full ${entry?.responses?.c2 ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]" : "bg-slate-300 animate-pulse"}`} />
-                </h3>
-                <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed italic">
-                  {entry?.responses?.c2 || "Huddleを開始すると、マモがリスクを分析します。"}
-                </p>
-              </div>
-            </div>
-          </div>
-
           {entry?.segments?.home && (
-            <div className="glass-card p-4 space-y-2 mt-4 border-l-4 border-l-orange-400">
-              <div className="flex items-center text-[10px] font-bold text-slate-500 mb-1">
-                <CheckCircle2 size={12} className="mr-1 text-green-500" />
-                LOG (C1) による整理
-              </div>
-              <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">
-                {entry?.segments?.home}
-              </p>
+            <div className="mt-4 border-l-4 border-l-orange-400">
+              <EditableSegment 
+                theme="home"
+                initialValue={entry.segments.home} 
+                onSave={(val) => handleSaveSegment('home', val)} 
+                placeholder="Home/Familyに関する記録..."
+              />
             </div>
           )}
 
@@ -326,26 +324,17 @@ Updated at: ${entry.updatedAt ? entry.updatedAt.toDate().toLocaleString() : "不
           style={{ animationDelay: '0.2s', animationFillMode: 'both' }}
         >
            {entry?.segments?.work && (
-            <div className="glass-card p-4 border-l-4 border-l-blue-400">
-               <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">
-                {entry?.segments?.work}
-              </p>
+            <div className="mt-4 border-l-4 border-l-blue-400">
+              <EditableSegment 
+                theme="work"
+                initialValue={entry.segments.work} 
+                onSave={(val) => handleSaveSegment('work', val)} 
+                placeholder="Work/Businessに関する記録..."
+              />
             </div>
            )}
 
-           {entry?.responses?.c4 && (
-             <div className="mt-4 p-4 border-l-4 border-l-slate-400 glass-card animate-float">
-                <div className="flex items-center space-x-2 mb-2 text-slate-600 dark:text-slate-400">
-                  <ShieldCheck size={16} />
-                  <span className="text-[10px] font-black uppercase tracking-widest">ZEN (大軍師)</span>
-                </div>
-                <p className="text-sm text-slate-700 dark:text-slate-300 italic">
-                  {entry?.responses?.c4}
-                </p>
-             </div>
-           )}
-
-           {!entry?.segments?.work && !entry?.responses?.c4 && (
+           {!entry?.segments?.work && (
              <div className="py-20 text-center text-slate-400 text-sm italic opacity-50">Workに関するデータはありません</div>
            )}
         </Column>
@@ -359,26 +348,17 @@ Updated at: ${entry.updatedAt ? entry.updatedAt.toDate().toLocaleString() : "不
           style={{ animationDelay: '0.3s', animationFillMode: 'both' }}
         >
            {entry?.segments?.hobby && (
-            <div className="glass-card p-4 mt-4 border-l-4 border-l-emerald-400">
-               <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">
-                {entry?.segments?.hobby}
-              </p>
+            <div className="mt-4 border-l-4 border-l-emerald-400">
+              <EditableSegment 
+                theme="hobby"
+                initialValue={entry.segments.hobby} 
+                onSave={(val) => handleSaveSegment('hobby', val)} 
+                placeholder="Hobby/Self-growthに関する記録..."
+              />
             </div>
            )}
 
-           {entry?.responses?.c3 && (
-             <div className="mt-4 p-4 border-l-4 border-l-emerald-400 glass-card animate-float">
-                <div className="flex items-center space-x-2 mb-2 text-emerald-600 dark:text-emerald-400">
-                  <Heart size={16} />
-                  <span className="text-[10px] font-black uppercase tracking-widest">WAKU (トレーナー)</span>
-                </div>
-                <p className="text-sm text-slate-700 dark:text-slate-300 italic leading-relaxed">
-                  {entry?.responses?.c3}
-                </p>
-             </div>
-           )}
-
-           {!entry?.segments?.hobby && !entry?.responses?.c3 && (
+           {!entry?.segments?.hobby && (
              <div className="py-20 text-center text-slate-400 text-sm italic opacity-50">Hobbyに関するデータはありません</div>
            )}
         </Column>
@@ -408,6 +388,7 @@ Updated at: ${entry.updatedAt ? entry.updatedAt.toDate().toLocaleString() : "不
         onClose={() => setHealthModalType(null)}
         onSaved={fetchEntry}
       />
+      <ChatWindow userId={user.uid} dateStr={dateStr} />
     </main>
   );
 }

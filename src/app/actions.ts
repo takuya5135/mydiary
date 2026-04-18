@@ -1,6 +1,5 @@
 "use server";
 
-import { runAIHuddle } from "@/lib/ai/huddle";
 import { uploadMarkdownToDrive } from "@/lib/google/drive";
 
 export async function backupToDriveAction(
@@ -17,44 +16,82 @@ export async function backupToDriveAction(
   }
 }
 
-export async function executeHuddleAction(
+import { organizeDiary, chatWithCompanion } from "@/lib/ai/huddle";
+import { fetchDailyCalendarEvents } from "@/lib/google/calendar";
+import { ChatMessage, saveChatMessage } from "@/lib/firebase/chat";
+
+export async function organizeDiaryAction(
   rawText: string,
   contextStrings: {
-    bucketListContext: string;
     dictionaryContext: string;
-    pastContext: string;
-    profileContext?: string;
   }
 ) {
   try {
-    // DBアクセスを行わず、渡されたコンテキスト文字列を使ってGeminiを実行する
-    const huddleResult = await runAIHuddle(
-      rawText, 
-      contextStrings.pastContext, 
-      contextStrings.bucketListContext, 
-      contextStrings.dictionaryContext,
-      contextStrings.profileContext
-    );
-
-    return { success: true, data: huddleResult };
+    const result = await organizeDiary(rawText, contextStrings.dictionaryContext);
+    return { success: true, data: result };
   } catch (error: any) {
-    console.error("executeHuddleAction failed:", error);
-    
+    console.error("organizeDiaryAction failed:", error);
     let availableModelsStr = "";
     try {
       const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${process.env.GEMINI_API_KEY}`);
       if (resp.ok) {
         const data = await resp.json();
         const models = data.models
-          .filter((m: any) => m.supportedGenerationMethods.includes("generateContent"))
+          .filter((m: any) => m.supportedGenerationMethods?.includes("generateContent"))
           .map((m: any) => m.name.replace('models/', ''))
           .join(", ");
         availableModelsStr = `\n利用可能なモデル一覧: ${models}`;
       }
-    } catch (_) {
-      // 取得エラー時は無視
+    } catch (_) {}
+    return { success: false, error: error.message + availableModelsStr };
+  }
+}
+
+export async function chatWithAIAction(
+  userId: string,
+  message: string,
+  history: ChatMessage[],
+  contextStrings: {
+    bucketListContext: string;
+    dictionaryContext: string;
+    pastContext: string;
+    profileContext: string;
+    todaysDiaryContext: string;
+  },
+  googleToken: string | null,
+  dateStr: string
+) {
+  try {
+    // ユーザーのメッセージを保存
+    await saveChatMessage(userId, "user", message);
+
+    // カレンダーの予定を取得
+    let calendarContext = "予定なし";
+    if (googleToken) {
+      const events = await fetchDailyCalendarEvents(googleToken, dateStr);
+      if (events.length > 0) {
+        calendarContext = events.map(e => `- ${e.start}〜${e.end}: ${e.summary}`).join("\n");
+      }
     }
 
-    return { success: false, error: error.message + availableModelsStr };
+    // AIに問い合わせ
+    const replyText = await chatWithCompanion(
+      message,
+      history,
+      contextStrings.pastContext,
+      contextStrings.bucketListContext,
+      contextStrings.dictionaryContext,
+      contextStrings.profileContext,
+      calendarContext,
+      contextStrings.todaysDiaryContext
+    );
+
+    // AIの返信を保存
+    await saveChatMessage(userId, "model", replyText);
+
+    return { success: true, reply: replyText };
+  } catch (error: any) {
+    console.error("chatWithAIAction failed:", error);
+    return { success: false, error: error.message };
   }
 }
