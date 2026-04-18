@@ -2,8 +2,7 @@ import {
   collection, 
   doc, 
   getDoc, 
-  setDoc, 
-  updateDoc,
+  setDoc,
   query,
   where,
   orderBy,
@@ -11,21 +10,7 @@ import {
   getDocs,
   Timestamp 
 } from "firebase/firestore";
-
-// ... (existing code)
-
-export const getRecentEntries = async (userId: string, count: number = 10): Promise<DiaryEntry[]> => {
-  const q = query(
-    collection(db, COLLECTION_NAME),
-    where("userId", "==", userId),
-    orderBy("date", "desc"),
-    limit(count)
-  );
-  const querySnapshot = await getDocs(q);
-  return querySnapshot.docs.map(doc => doc.data() as DiaryEntry);
-};
 import { db } from "./config";
-import { format } from "date-fns";
 
 export interface DiaryEntry {
   userId: string;
@@ -53,7 +38,7 @@ export interface DiaryEntry {
 
 const COLLECTION_NAME = "entries";
 
-// Helper to get doc ID (userId_YYYY-MM-DD)
+// ドキュメントIDを生成 (userId_YYYY-MM-DD)
 const getEntryId = (userId: string, date: string) => `${userId}_${date}`;
 
 export const getDiaryEntry = async (userId: string, date: string): Promise<DiaryEntry | null> => {
@@ -76,4 +61,15 @@ export const saveDiaryEntry = async (entry: Partial<DiaryEntry> & { userId: stri
   };
 
   return await setDoc(docRef, data, { merge: true });
+};
+
+export const getRecentEntries = async (userId: string, count: number = 10): Promise<DiaryEntry[]> => {
+  const q = query(
+    collection(db, COLLECTION_NAME),
+    where("userId", "==", userId),
+    orderBy("date", "desc"),
+    limit(count)
+  );
+  const querySnapshot = await getDocs(q);
+  return querySnapshot.docs.map(doc => doc.data() as DiaryEntry);
 };
