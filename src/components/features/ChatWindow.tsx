@@ -108,7 +108,7 @@ export function ChatWindow({ userId, dateStr }: ChatWindowProps) {
 
       // 過去の記録を時系列でコンテキスト化
       const pastContext = recentEntries.length > 0
-        ? recentEntries.map(e => `【${e.date}】\n  Home: ${e.segments.home || "-"}\n  Work: ${e.segments.work || "-"}\n  Hobby: ${e.segments.hobby || "-"}`).join("\n\n")
+        ? recentEntries.map(e => `【${e.date}】\n  Home: ${e.segments?.home || "-"}\n  Work: ${e.segments?.work || "-"}\n  Hobby: ${e.segments?.hobby || "-"}`).join("\n\n")
         : "記録なし";
 
       // @ts-ignore
