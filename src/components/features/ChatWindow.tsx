@@ -106,9 +106,15 @@ export function ChatWindow({ userId, dateStr }: ChatWindowProps) {
         todaysDiaryContext = `Home: ${todaysEntry.segments.home}\nWork: ${todaysEntry.segments.work}\nHobby: ${todaysEntry.segments.hobby}`;
       }
 
-      // 過去の記録を時系列でコンテキスト化
+      // 過去の記録を時系列でコンテキスト化（トークン節約のため直近7日は詳細、以降は日付のみ）
       const pastContext = recentEntries.length > 0
-        ? recentEntries.map(e => `【${e.date}】\n  Home: ${e.segments?.home || "-"}\n  Work: ${e.segments?.work || "-"}\n  Hobby: ${e.segments?.hobby || "-"}`).join("\n\n")
+        ? recentEntries.map((e, idx) => {
+            const dateStr = `【${e.date}】`;
+            if (idx < 7) {
+              return `${dateStr}\n  Home: ${e.segments?.home || "-"}\n  Work: ${e.segments?.work || "-"}\n  Hobby: ${e.segments?.hobby || "-"}`;
+            }
+            return `${dateStr} (記録あり)`;
+          }).join("\n")
         : "記録なし";
 
       // @ts-ignore
