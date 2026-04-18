@@ -40,13 +40,15 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  /* 全体スクロールを許可 */
+  overflow-y: auto !important;
   overflow-x: hidden;
 }
 
 /* Glassmorphism utility classes */
 @layer utilities {
   .glass-panel {
-    @apply bg-white/40 dark:bg-black/20 backdrop-blur-2xl border border-white/20 dark:border-white/5 shadow-2xl rounded-3xl;
+    @apply bg-white/70 backdrop-blur-2xl border border-white/40 dark:bg-black/40 dark:border-white/5 shadow-2xl rounded-3xl;
   }
   .glass-card {
     @apply bg-white/60 dark:bg-white/5 backdrop-blur-xl border border-white/30 dark:border-white/10 shadow-lg rounded-2xl transition-all duration-300 hover:scale-[1.01] hover:bg-white/80 dark:hover:bg-white/10;
@@ -60,8 +62,23 @@ body {
   .theme-hobby {
     background: radial-gradient(circle at top right, rgba(16, 185, 129, 0.08), transparent 50%);
   }
-  .animate-float {
-    animation: float 6s ease-in-out infinite;
+  
+  /* 縦書き強制回避 */
+  .btn-text-fix {
+    display: block !important;
+    white-space: nowrap !important;
+    writing-mode: horizontal-tb !important;
+  }
+
+  /* 2ペイン用レイアウト */
+  .main-layout {
+    @apply flex flex-col md:flex-row w-full max-w-[1800px] mx-auto gap-8 px-4 md:px-8;
+  }
+  .left-pane {
+    @apply w-full md:w-[480px] flex-shrink-0 md:sticky md:top-8 self-start;
+  }
+  .right-pane {
+    @apply flex-1 min-w-0 space-y-8 pb-20;
   }
 }
 
@@ -69,4 +86,19 @@ body {
   0% { transform: translateY(0px); }
   50% { transform: translateY(-8px); }
   100% { transform: translateY(0px); }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* スクロールバーのカスタマイズ */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-slate-200 dark:bg-zinc-800 rounded-full hover:bg-slate-300 dark:hover:bg-zinc-700;
 }

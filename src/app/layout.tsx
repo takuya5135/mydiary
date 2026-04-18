@@ -19,7 +19,7 @@ export const metadata: Metadata = {
       { url: "/apple-touch-icon.png?v=3", sizes: "180x180", type: "image/png" },
     ],
   },
-  manifest: "/site.webmanifest",
+  manifest: "/manifest.json",
 };
 
 export default function RootLayout({
@@ -30,7 +30,7 @@ export default function RootLayout({
   return (
     <html lang="ja" className="dark">
       <body
-        className={`${inter.variable} font-sans antialiased bg-slate-50 dark:bg-zinc-950 text-slate-900 dark:text-slate-50 overflow-hidden`}
+        className={`${inter.variable} font-sans antialiased bg-slate-50 dark:bg-zinc-950 text-slate-900 dark:text-slate-50`}
       >
         <AuthProvider>
           {children}

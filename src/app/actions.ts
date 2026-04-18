@@ -63,18 +63,28 @@ export async function chatWithAIAction(
   persona?: "log" | "mamo" | "waku" | "zen"
 ) {
   try {
-    // カレンダーの予定を取得
-    let calendarContext = "予定なし";
+    // カレンダーの予定とタスクを取得
+    let calendarContext = "予定・タスクなし";
     let calendarError = false;
+    
     if (googleToken) {
       try {
-        const events = await fetchDailyCalendarEvents(googleToken, dateStr);
-        if (events.length > 0) {
-          calendarContext = events.map(e => `- ${e.start}〜${e.end}: ${e.summary}`).join("\n");
+        const [events, tasks] = await Promise.all([
+          fetchDailyCalendarEvents(googleToken, dateStr),
+          // @ts-ignore
+          import("@/lib/google/tasks").then(mod => mod.fetchDailyTasks(googleToken))
+        ]);
+
+        const eventStrs = events.map(e => `- [予定] ${e.start}〜${e.end}: ${e.summary}`);
+        const taskStrs = tasks.map(t => `- [タスク] ${t.title}${t.due ? ` (期限: ${t.due})` : ""}`);
+        
+        const combined = [...eventStrs, ...taskStrs];
+        if (combined.length > 0) {
+          calendarContext = combined.join("\n");
         }
       } catch (e: any) {
         if (e.message === "GOOGLE_CALENDAR_UNAUTHORIZED") {
-          calendarContext = "【重要】Googleカレンダーの認証が切れています。ユーザーに再ログイン（Googleでログインし直す）を促してください。";
+          calendarContext = "【重要】Google関連の認証が切れています。ユーザーに再ログインを促してください。";
           calendarError = true;
         }
       }

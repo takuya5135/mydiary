@@ -82,7 +82,7 @@ export function DiaryInput({ userId, date, onSave, onOrganizeTrigger }: DiaryInp
           date,
           rawText: text,
           segments: result.data,
-          // responsesはもうAIに生成させないため更新しない
+          keywords: result.data.keywords, // キーワードを保存
         });
         
         // 4.5 提案をセット

@@ -147,11 +147,11 @@ Updated at: ${entry.updatedAt ? entry.updatedAt.toDate().toLocaleString() : "不
   };
 
   return (
-    <main className="h-screen w-full p-4 md:p-6 overflow-hidden bg-gradient-to-br from-slate-50 to-slate-100 dark:from-zinc-950 dark:to-zinc-900 flex flex-col">
-      <header className="flex flex-col md:flex-row justify-between items-center mb-6 px-2 gap-4">
+    <main className="min-h-screen w-full bg-gradient-to-br from-slate-50 to-slate-100 dark:from-zinc-950 dark:to-zinc-900 flex flex-col pb-10">
+      <header className="sticky top-0 z-50 bg-white/10 backdrop-blur-md border-b border-slate-200/50 dark:border-zinc-800/50 flex flex-col md:flex-row justify-between items-center py-4 px-4 md:px-8 gap-4 mb-8">
         <div className="flex items-center">
           <h1 className="text-2xl font-black text-slate-900 dark:text-white flex items-center mr-6">
-            my日記 <span className="ml-3 text-xs font-normal text-slate-500 bg-slate-200 dark:bg-zinc-800 px-2 py-0.5 rounded-full">v1.1.2</span>
+            my日記 <span className="ml-3 text-[10px] font-normal text-slate-500 bg-slate-200 dark:bg-zinc-800 px-2 py-0.5 rounded-full">v3.0</span>
           </h1>
           
           <div className="flex items-center space-x-1 bg-white dark:bg-zinc-900 rounded-xl px-2 py-1 border border-slate-200 dark:border-zinc-800 shadow-sm">
@@ -162,21 +162,11 @@ Updated at: ${entry.updatedAt ? entry.updatedAt.toDate().toLocaleString() : "不
               <ChevronLeft size={18} />
             </button>
             <div className="flex items-center space-x-2 px-3">
-              <CalendarIcon size={16} className="text-orange-500" />
               <span className="text-sm font-bold min-w-[120px] text-center">
                 {format(selectedDate, "yyyy年MM月dd日 (eee)", { locale: ja })}
               </span>
-              {isToday ? (
-                <span className="text-[10px] bg-orange-500 text-white px-1.5 py-0.5 rounded font-bold">
-                  今日
-                </span>
-              ) : (
-                <button 
-                  onClick={() => setSelectedDate(new Date())}
-                  className="text-[10px] bg-orange-100 text-orange-600 dark:bg-orange-900/40 dark:text-orange-400 px-1.5 py-0.5 rounded font-bold hover:bg-orange-200 transition-colors"
-                >
-                  今日へ
-                </button>
+              {isToday && (
+                <span className="text-[10px] bg-orange-500 text-white px-1.5 py-0.5 rounded font-bold">今日</span>
               )}
             </div>
             <button 
@@ -188,34 +178,38 @@ Updated at: ${entry.updatedAt ? entry.updatedAt.toDate().toLocaleString() : "不
           </div>
         </div>
 
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-3 overflow-x-auto max-w-full pb-2 md:pb-0">
           <button 
             onClick={handleBackup}
             disabled={isBackingUp || !entry}
-            className={`flex items-center space-x-2 px-3 py-1.5 rounded-full border text-xs font-bold transition-all ${
-              isBackingUp 
-                ? "bg-slate-100 dark:bg-zinc-800 text-slate-400 border-slate-200" 
-                : "bg-blue-600 border-blue-500 text-white hover:bg-blue-700 shadow-lg shadow-blue-500/20"
-            }`}
+            className="flex items-center space-x-2 px-4 py-2 rounded-full bg-blue-600 text-white text-xs font-bold hover:bg-blue-700 shadow-lg shadow-blue-500/20 transition-all disabled:opacity-50"
           >
             <CloudUpload size={16} className={isBackingUp ? "animate-pulse" : ""} />
-            <span>{isBackingUp ? "保存中..." : "Drive保存"}</span>
+            <span className="btn-text-fix">{isBackingUp ? "保存中..." : "Drive保存"}</span>
+          </button>
+
+          <button 
+            onClick={() => setIsBucketModalOpen(true)}
+            className="flex items-center space-x-2 px-4 py-2 rounded-full bg-amber-500 text-white text-xs font-bold hover:bg-amber-600 shadow-lg shadow-amber-500/20 transition-all"
+          >
+            <Trophy size={16} />
+            <span className="btn-text-fix">バケットリスト</span>
           </button>
 
           <button 
             onClick={() => setIsDictModalOpen(true)}
-            className="flex items-center space-x-2 px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800 text-slate-300 hover:text-white transition-colors text-xs font-bold"
+            className="flex items-center space-x-2 px-4 py-2 rounded-full bg-slate-900 border border-slate-800 text-slate-300 hover:text-white transition-colors text-xs font-bold"
           >
             <Book size={16} className="text-orange-500" />
-            <span>固有名詞辞書</span>
+            <span className="btn-text-fix">固有名詞辞書</span>
           </button>
           
           <button 
             onClick={() => setIsProfileModalOpen(true)}
-            className="flex items-center space-x-2 bg-white dark:bg-zinc-900 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors rounded-full pl-1 pr-3 py-1 border border-slate-200 dark:border-zinc-800 shadow-sm ml-2 cursor-pointer"
+            className="flex items-center space-x-2 bg-white dark:bg-zinc-900 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors rounded-full pl-1 pr-4 py-1 border border-slate-200 dark:border-zinc-800 shadow-sm ml-2"
           >
             <img src={user.photoURL || ""} alt="" className="w-8 h-8 rounded-full border border-slate-200 dark:border-zinc-700" />
-            <span className="text-sm font-medium text-slate-700 dark:text-slate-200">{user.displayName}</span>
+            <span className="text-sm font-medium text-slate-700 dark:text-slate-200 btn-text-fix">{user.displayName}</span>
           </button>
           <button 
             onClick={handleLogout}
@@ -226,177 +220,119 @@ Updated at: ${entry.updatedAt ? entry.updatedAt.toDate().toLocaleString() : "不
         </div>
       </header>
 
-      <div className="max-w-[1600px] w-full mx-auto mb-4 px-2">
-        <DiaryInput 
-          userId={user.uid} 
-          date={dateStr} 
-          onSave={fetchEntry}
-        />
-      </div>
-
-      {/* --- LIFE BAR (バケットリスト) --- */}
-      <div className="max-w-[1600px] w-full mx-auto mb-4 px-2">
-        <div
-          onClick={() => setIsBucketModalOpen(true)}
-          className="w-full cursor-pointer group flex items-center justify-between px-6 py-4 rounded-2xl border border-amber-200/60 dark:border-amber-700/40 bg-gradient-to-r from-amber-50 via-orange-50 to-yellow-50 dark:from-amber-950/40 dark:via-orange-950/30 dark:to-yellow-950/40 shadow-md hover:shadow-lg hover:scale-[1.005] transition-all"
-        >
-          <div className="flex items-center space-x-4">
-            <div className="bg-amber-100 dark:bg-amber-900/60 p-3 rounded-xl text-amber-600 dark:text-amber-400 shadow-inner">
-              <Trophy size={22} />
-            </div>
-            <div>
-              <p className="text-[10px] font-black tracking-[0.2em] text-amber-500 dark:text-amber-400 uppercase mb-0.5">Life</p>
-              <h2 className="text-sm font-black text-slate-800 dark:text-slate-100">死ぬまでにやりたいことリスト</h2>
-              <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">Home・Work・Hobby すべてを超えた、あなたの人生の目標</p>
-            </div>
-          </div>
-          <div className="flex items-center space-x-2">
-            <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/50 px-3 py-1 rounded-full hidden md:block">クリックして確認・編集</span>
-            <Plus size={22} className="text-amber-400 group-hover:text-amber-600 transition-transform group-hover:rotate-90" />
-          </div>
-        </div>
-      </div>
-
-      {/* --- CALENDAR STRIP --- */}
-      <div className="max-w-[1600px] w-full mx-auto mb-6 px-2">
-        {user && <CalendarStrip userId={user.uid} date={dateStr} />}
-      </div>
-      
-      <div className="flex-1 max-w-[1600px] w-full mx-auto grid grid-cols-1 md:grid-cols-3 gap-6 min-h-0">
-        
-        {/* --- HOME COLUMN --- */}
-        <Column
-          id="home"
-          title="Home"
-          icon={<Home size={28} />}
-          className="animate-slide-up"
-          style={{ animationDelay: '0.1s', animationFillMode: 'both' }}
-        >
-          {/* Health Check Cards */}
-          <div className="grid grid-cols-2 gap-3 mb-2">
-            <button 
-              onClick={() => handleHealthCheckClick('morning')}
-              className={`glass-card flex flex-col items-center justify-center p-4 group transition-all hover:scale-[1.02] ${
-                entry?.healthData?.morning 
-                  ? "bg-orange-500/20 border-orange-500/50 text-orange-600 dark:text-orange-400 shadow-lg shadow-orange-500/10" 
-                  : "text-slate-400 hover:text-orange-400"
-              }`}
-            >
-              <Sun size={32} className={`mb-2 transition-transform ${entry?.healthData?.morning ? "scale-110" : "group-hover:scale-110"}`} />
-              <div className="flex items-center space-x-1">
-                <span className="font-bold text-sm">おはよう</span>
-                {entry?.healthData?.morning && <CheckCircle2 size={14} className="text-orange-500" />}
-              </div>
-            </button>
-            <button 
-              onClick={() => handleHealthCheckClick('evening')}
-              className={`glass-card flex flex-col items-center justify-center p-4 group transition-all hover:scale-[1.02] ${
-                entry?.healthData?.evening 
-                  ? "bg-indigo-500/20 border-indigo-500/50 text-indigo-600 dark:text-indigo-400 shadow-lg shadow-indigo-500/10" 
-                  : "text-slate-400 hover:text-indigo-400"
-              }`}
-            >
-              <Moon size={32} className={`mb-2 transition-transform ${entry?.healthData?.evening ? "scale-110" : "group-hover:scale-110"}`} />
-              <div className="flex items-center space-x-1">
-                <span className="font-bold text-sm">おやすみ</span>
-                {entry?.healthData?.evening && <CheckCircle2 size={14} className="text-indigo-500" />}
-              </div>
-            </button>
-          </div>
-
-          {entry?.segments?.home && (
-            <div className="mt-4 border-l-4 border-l-orange-400">
-              <EditableSegment 
-                theme="home"
-                initialValue={entry.segments.home} 
-                onSave={(val) => handleSaveSegment('home', val)} 
-                placeholder="Home/Familyに関する記録..."
-              />
-            </div>
-          )}
-
-          <div className="mt-6 border-t border-white/10 pt-4">
-            <PhotoCuration 
+      <div className="main-layout flex flex-col md:flex-row">
+        {/* --- LEFT PANE (INPUT) --- */}
+        <aside className="left-pane animate-slide-up">
+          <div className="sticky top-28 space-y-6">
+            <DiaryInput 
               userId={user.uid} 
               date={dateStr} 
-              selectedPhotoIds={entry?.photos || []}
-              onUpdate={fetchEntry} 
+              onSave={fetchEntry}
             />
+            
+            <div className="glass-panel p-6">
+              <div className="flex items-center space-x-3 mb-4">
+                <CalendarIcon size={20} className="text-orange-500" />
+                <h3 className="text-sm font-black text-slate-700 dark:text-slate-200">今日の予定とタスク</h3>
+              </div>
+              <div className="space-y-1">
+                {user && <CalendarStrip userId={user.uid} date={dateStr} />}
+              </div>
+            </div>
           </div>
-        </Column>
+        </aside>
 
-        {/* --- WORK COLUMN --- */}
-        <Column
-          id="work"
-          title="Work"
-          icon={<Briefcase size={28} />}
-          className="animate-slide-up"
-          style={{ animationDelay: '0.2s', animationFillMode: 'both' }}
-        >
-           {entry?.segments?.work && (
-            <div className="mt-4 border-l-4 border-l-blue-400">
-              <EditableSegment 
-                theme="work"
-                initialValue={entry.segments.work} 
-                onSave={(val) => handleSaveSegment('work', val)} 
-                placeholder="Work/Businessに関する記録..."
-              />
-            </div>
-           )}
+        {/* --- RIGHT PANE (OUTPUT) --- */}
+        <section className="right-pane">
+          <div className="space-y-6">
+            {/* HOME COLUMN */}
+            <Column
+              id="home"
+              title="Home"
+              icon={<Home size={28} />}
+              className="animate-slide-up"
+            >
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                <button 
+                  onClick={() => handleHealthCheckClick('morning')}
+                  className={`glass-card flex flex-col items-center justify-center p-6 group transition-all hover:scale-[1.02] ${
+                    entry?.healthData?.morning ? "bg-orange-500/10 border-orange-500/30" : ""
+                  }`}
+                >
+                  <Sun size={32} className={`mb-2 ${entry?.healthData?.morning ? "text-orange-500" : "text-slate-300"}`} />
+                  <span className="font-bold text-sm">おはよう</span>
+                </button>
+                <button 
+                  onClick={() => handleHealthCheckClick('evening')}
+                  className={`glass-card flex flex-col items-center justify-center p-6 group transition-all hover:scale-[1.02] ${
+                    entry?.healthData?.evening ? "bg-indigo-500/10 border-indigo-500/30" : ""
+                  }`}
+                >
+                  <Moon size={32} className={`mb-2 ${entry?.healthData?.evening ? "text-indigo-500" : "text-slate-300"}`} />
+                  <span className="font-bold text-sm">おやすみ</span>
+                </button>
+              </div>
 
-           {!entry?.segments?.work && (
-             <div className="py-20 text-center text-slate-400 text-sm italic opacity-50">Workに関するデータはありません</div>
-           )}
-        </Column>
+              {entry?.segments?.home && (
+                <div className="mt-4 border-l-4 border-l-orange-400 pl-4 bg-orange-50/20 dark:bg-orange-950/10 py-2 rounded-r-xl">
+                  <EditableSegment 
+                    theme="home"
+                    initialValue={entry.segments.home} 
+                    onSave={(val) => handleSaveSegment('home', val)} 
+                  />
+                </div>
+              )}
 
-        {/* --- HOBBY COLUMN --- */}
-        <Column
-          id="hobby"
-          title="Hobby"
-          icon={<Heart size={28} />}
-          className="animate-slide-up"
-          style={{ animationDelay: '0.3s', animationFillMode: 'both' }}
-        >
-           {entry?.segments?.hobby && (
-            <div className="mt-4 border-l-4 border-l-emerald-400">
-              <EditableSegment 
-                theme="hobby"
-                initialValue={entry.segments.hobby} 
-                onSave={(val) => handleSaveSegment('hobby', val)} 
-                placeholder="Hobby/Self-growthに関する記録..."
-              />
-            </div>
-           )}
+              <div className="mt-6 border-t border-slate-100 dark:border-zinc-800 pt-6">
+                <PhotoCuration 
+                  userId={user.uid} 
+                  date={dateStr} 
+                  selectedPhotoIds={entry?.photos || []}
+                  onUpdate={fetchEntry} 
+                />
+              </div>
+            </Column>
 
-           {!entry?.segments?.hobby && (
-             <div className="py-20 text-center text-slate-400 text-sm italic opacity-50">Hobbyに関するデータはありません</div>
-           )}
-        </Column>
+            {/* WORK COLUMN */}
+            <Column id="work" title="Work" icon={<Briefcase size={28} />}>
+               {entry?.segments?.work ? (
+                <div className="mt-4 border-l-4 border-l-blue-400 pl-4 bg-blue-50/20 dark:bg-blue-950/10 py-2 rounded-r-xl">
+                  <EditableSegment 
+                    theme="work"
+                    initialValue={entry.segments.work} 
+                    onSave={(val) => handleSaveSegment('work', val)} 
+                  />
+                </div>
+               ) : (
+                 <div className="py-12 text-center text-slate-300 dark:text-zinc-600 text-sm italic">Workの記録はありません</div>
+               )}
+            </Column>
+
+            {/* HOBBY COLUMN */}
+            <Column id="hobby" title="Hobby" icon={<Heart size={28} />}>
+               {entry?.segments?.hobby ? (
+                <div className="mt-4 border-l-4 border-l-emerald-400 pl-4 bg-emerald-50/20 dark:bg-emerald-950/10 py-2 rounded-r-xl">
+                  <EditableSegment 
+                    theme="hobby"
+                    initialValue={entry.segments.hobby} 
+                    onSave={(val) => handleSaveSegment('hobby', val)} 
+                  />
+                </div>
+               ) : (
+                 <div className="py-12 text-center text-slate-300 dark:text-zinc-600 text-sm italic">Hobbyの記録はありません</div>
+               )}
+            </Column>
+          </div>
+        </section>
       </div>
 
-      <BucketListModal 
-        userId={user.uid} 
-        isOpen={isBucketModalOpen} 
-        onClose={() => setIsBucketModalOpen(false)} 
-      />
-      <DictionaryModal 
-        userId={user.uid} 
-        isOpen={isDictModalOpen} 
-        onClose={() => setIsDictModalOpen(false)} 
-      />
-      <ProfileModal 
-        userId={user.uid} 
-        isOpen={isProfileModalOpen} 
-        onClose={() => setIsProfileModalOpen(false)} 
-      />
+      <BucketListModal userId={user.uid} isOpen={isBucketModalOpen} onClose={() => setIsBucketModalOpen(false)} />
+      <DictionaryModal userId={user.uid} isOpen={isDictModalOpen} onClose={() => setIsDictModalOpen(false)} />
+      <ProfileModal userId={user.uid} isOpen={isProfileModalOpen} onClose={() => setIsProfileModalOpen(false)} />
       <HealthCheckModal 
-        userId={user.uid}
-        date={dateStr}
-        type={healthModalType}
+        userId={user.uid} date={dateStr} type={healthModalType}
         currentData={healthModalType ? entry?.healthData?.[healthModalType] : undefined}
-        isOpen={healthModalType !== null}
-        onClose={() => setHealthModalType(null)}
-        onSaved={fetchEntry}
+        isOpen={healthModalType !== null} onClose={() => setHealthModalType(null)} onSaved={fetchEntry}
       />
       <ChatWindow userId={user.uid} dateStr={dateStr} />
     </main>

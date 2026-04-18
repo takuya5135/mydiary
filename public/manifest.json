@@ -1,0 +1,21 @@
+{
+  "name": "my日記 - AI外部脳",
+  "short_name": "my日記",
+  "description": "AIと連携して人生を構造化するスマート日記アプリ",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#09090b",
+  "theme_color": "#f97316",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

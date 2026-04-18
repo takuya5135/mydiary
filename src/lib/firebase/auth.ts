@@ -13,8 +13,7 @@ export const loginWithGoogle = async () => {
   // Add necessary scopes for Phase 3 and Calendar
   provider.addScope("https://www.googleapis.com/auth/drive.file");
   provider.addScope("https://www.googleapis.com/auth/calendar.readonly");
-  // NOTE: photolibrary.readonly はGoogleの審査が必要なため一旦無効化
-  // provider.addScope("https://www.googleapis.com/auth/photolibrary.readonly");
+  provider.addScope("https://www.googleapis.com/auth/tasks.readonly"); // 追加
   
   try {
     const result = await signInWithPopup(auth, provider);

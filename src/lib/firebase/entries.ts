@@ -21,6 +21,7 @@ export interface DiaryEntry {
     work: string;
     hobby: string;
   };
+  keywords?: string[]; // AI抽出キーワード
   healthData?: {
     morning?: { 
       comment?: string;
