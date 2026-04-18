@@ -13,16 +13,23 @@ import { db as serverDb } from "./config";
 export interface ChatMessage {
   id?: string;
   role: "user" | "model";
+  agentId?: "log" | "mamo" | "waku" | "zen";
   content: string;
   createdAt: Timestamp;
 }
 
-export const saveChatMessage = async (userId: string, role: "user" | "model", content: string) => {
+export const saveChatMessage = async (
+  userId: string, 
+  role: "user" | "model", 
+  content: string,
+  agentId?: "log" | "mamo" | "waku" | "zen"
+) => {
   try {
     const messagesRef = collection(serverDb, "chats", userId, "messages");
     await addDoc(messagesRef, {
       role,
       content,
+      agentId,
       createdAt: Timestamp.now()
     });
   } catch (error: any) {

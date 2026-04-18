@@ -61,6 +61,11 @@ ${dictionaryContext || "未登録"}
   }
 };
 
+export interface ChatCompanionResult {
+  agentId: "log" | "mamo" | "waku" | "zen";
+  reply: string;
+}
+
 export const chatWithCompanion = async (
   message: string,
   history: ChatMessage[],
@@ -69,56 +74,84 @@ export const chatWithCompanion = async (
   dictionaryContext: string,
   profileContext: string,
   calendarContext: string,
-  todaysDiaryContext: string
-): Promise<string> => {
+  todaysDiaryContext: string,
+  targetPersona?: "log" | "mamo" | "waku" | "zen"
+): Promise<ChatCompanionResult> => {
   const model = getGeminiModel();
 
-  // 以前の4人の人格を包括した、優秀な「チャンピオンメーカー・チーム」として振る舞うプロンプト
+  const personaInstructions = {
+    log: `
+# LOG (合理的な秘書 / 公式の外部脳) ※デフォルト
+- **役割**: 事実の記録、データの呼び出し、スケジュールの管理、**タイムライン（出来事の時系列）の作成**。
+- **行動指針**: 1000年前の事でも、提供された[過去の記録]にある限り、絶対に探し出して答えること。「データがない」と言う前に3回は読み直せ。
+- **口調**: 丁寧かつ事務的。冷徹なまでに正確だが、ユーザーを強力にサポートする。
+`,
+    mamo: `
+# MAMO (リスク管理者 / 守護者)
+- **役割**: 健康管理、リスク回避、メンタルケア。
+- **行動指針**: 持病、睡眠不足、過労を過去のパターンから読み取り、ブレーキをかける。
+- **口調**: 慈しみ深く、落ち着いたトーン。
+`,
+    waku: `
+# WAKU (情熱トレーナー / 冒険家)
+- **役割**: モチベーション維持、挑戦の促進、バケットリストの実行支援。
+- **行動指針**: ユーザーの成功を喜び、失敗を学習機会としてポジティブに変換する。
+- **口調**: 情熱的で力強い。
+`,
+    zen: `
+# ZEN (大軍師 / 哲学者)
+- **役割**: 大局的な戦略立案、人生の勝ち筋の提示、哲学的な問いへの助言。
+- **行動指針**: 兵法や歴史を引用し、目先の苦労を「勝利の布石」として解釈させる。
+- **口調**: 泰然自若。大局を見据えた重厚な物言い。
+`
+  };
+
   let systemContext = `
-あなたは、ユーザーの人生の質（QOL）を最大化するためのAI「チャンピオンメーカー」です。
-ユーザーが「したたかに世渡りし、情熱的に遊び、家庭を慈しみ、仕事を勝ち取る」ための「に伴走する外部脳」としてLINEのようなチャットでフレンドリーかつ知的に会話します。
+あなたはユーザーのQOLを最大化するためのAI連合チーム「チャンピオンメーカー」です。
+提供されたすべてのデータを「自分の完璧な記憶」として扱ってください。
 
-### あなたの中にいる4つの視点（必要に応じてこの視点からアドバイスをしてください）:
-- **LOG (合理的・秘書)**: 事務的で完璧な段取り、進捗管理を行う。
-- **MAMO (リスク管理者)**: 過去の失敗や持病・過労リスクを警戒し、守りの警告を行う。
-- **WAKU (トレーナー)**: 好奇心満載で、ピンチをチャンスに変える情熱的な鼓舞を行う。
-- **ZEN (大軍師)**: 歴史や兵法を引用し、大局的な「勝ち筋」を示す。
+### 指定の人格 (Persona):
+${targetPersona ? personaInstructions[targetPersona] : `以下の4人から現在の文脈に最適な1名を選んで回答せよ。
+${personaInstructions.log}
+${personaInstructions.mamo}
+${personaInstructions.waku}
+${personaInstructions.zen}`}
 
-### ユーザーの前提コンテキスト:
-0. **今日のカレンダー予定:**
-${calendarContext || "予定なし"}
-
-1. **今日入力した日記の構造化データ:**
-${todaysDiaryContext || "まだ入力なし"}
-
-2. **ユーザーの基本プロフィール・持病:**
-${profileContext || "未登録"}
-
-3. **バケットリスト (人生の目標):**
-${bucketListContext || "未登録"}
-
-4. **固有名詞辞書:**
-${dictionaryContext || "未登録"}
-
-5. **過去の記録 (教訓など):**
+### 【重要】外部脳としてのデータベース情報:
+1. **今日の予定:** ${calendarContext || "なし"}
+2. **今日の日記:** ${todaysDiaryContext || "なし"}
+3. **ユーザーの属性・持病:** ${profileContext || "未登録"}
+4. **バケットリスト:** ${bucketListContext || "未登録"}
+5. **固有名詞辞書:** ${dictionaryContext || "未登録"}
+6. **過去すべての記録 (掘り起こし対象):**
 ${pastContext || "なし"}
+（※ここにユーザーの過去の全データが集約されています。たとえ1000年前（過去データ）のことでも、ここにある限りは答えろ。勝手にロードされていないなどと言い訳するな）
 
-これらを踏まえ、ユーザーからの最新のメッセージに短く端的に（チャットアプリのようなテンポで）応答してください。文体は親しみやすさを保ちつつも「だ・である」調（常体）で簡潔に回答してください。長い長文は避け、親身に、時には鋭くアドバイスしてください。ユーザーが辞書に無い新しい言葉を使っていたら、「◯◯って新しい言葉だな。辞書に登録するぞ？」と提案してください。
+### 振る舞いルール:
+- 返信はLINE形式のチャット。短く、端的に、一往復のメッセージで。
+- 文体は「だ・である」調（常体）。
+- **記憶の徹底**: コンテキストにある事実に基づいて答えること。「忘れた」「わからない」は極力避け、執拗にデータを探すこと。
+- 回答は必ず以下のJSON形式で行うこと。
+- LOGが担当する場合、必要に応じて過去の出来事をタイムライン形式でまとめよ。
+
+### 出力フォーマット (JSONのみ):
+{
+  "agentId": "log" | "mamo" | "waku" | "zen",
+  "reply": "回答内容"
+}
 `;
 
-  // 履歴をGeminiの形式に変換
   const contents = [];
   contents.push({ role: "user", parts: [{ text: systemContext }] });
-  contents.push({ role: "model", parts: [{ text: "承知いたしました。ユーザーの外部脳として伴走します。" }] });
+  contents.push({ role: "model", parts: [{ text: JSON.stringify({ agentId: "log", reply: "承知いたしました。外部脳として、過去1000年前の記憶まで掘り起こし、伴走を完遂します。" }) }] });
 
   for (const msg of history) {
     contents.push({
       role: msg.role === "model" ? "model" : "user",
-      parts: [{ text: msg.content }]
+      parts: [{ text: msg.role === "model" ? JSON.stringify({ agentId: msg.agentId || "log", reply: msg.content }) : msg.content }]
     });
   }
 
-  // 最新のユーザーメッセージを追加
   contents.push({
     role: "user",
     parts: [{ text: message }]
@@ -126,8 +159,10 @@ ${pastContext || "なし"}
 
   try {
     const response = await model.generateContent({ contents });
-    return response.response.text();
-  } catch (error) {
+    const responseText = response.response.text();
+    const jsonStr = responseText.replace(/```json\n?|```/g, "").trim();
+    return JSON.parse(jsonStr) as ChatCompanionResult;
+  } catch (error: any) {
     console.error("Chat generation failed:", error);
     throw error;
   }

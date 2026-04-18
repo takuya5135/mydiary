@@ -59,7 +59,8 @@ export async function chatWithAIAction(
     todaysDiaryContext: string;
   },
   googleToken: string | null,
-  dateStr: string
+  dateStr: string,
+  persona?: "log" | "mamo" | "waku" | "zen"
 ) {
   try {
     // カレンダーの予定を取得
@@ -72,7 +73,7 @@ export async function chatWithAIAction(
     }
 
     // AIに問い合わせ
-    const replyText = await chatWithCompanion(
+    const aiResult = await chatWithCompanion(
       message,
       history,
       contextStrings.pastContext,
@@ -80,11 +81,16 @@ export async function chatWithAIAction(
       contextStrings.dictionaryContext,
       contextStrings.profileContext,
       calendarContext,
-      contextStrings.todaysDiaryContext
+      contextStrings.todaysDiaryContext,
+      persona
     );
 
-    // AIの返信を返すだけにする（保存はクライアント側で行う）
-    return { success: true, reply: replyText };
+    // AIの返信と人格IDを返す
+    return { 
+      success: true, 
+      reply: aiResult.reply, 
+      agentId: aiResult.agentId 
+    };
   } catch (error: any) {
     console.error("chatWithAIAction failed:", error);
     return { success: false, error: error.message };
