@@ -41,7 +41,7 @@ ${entry.segments.hobby || "なし"}
 ${entry.rawText}
 
 ---
-Updated at: ${entry.updatedAt.toDate().toLocaleString()}
+Updated at: ${entry.updatedAt ? entry.updatedAt.toDate().toLocaleString() : "不明"}
 `.trim();
 
     // 4. Upload to Drive
