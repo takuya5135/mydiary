@@ -165,12 +165,16 @@ Updated at: ${entry.updatedAt ? entry.updatedAt.toDate().toLocaleString() : "不
               <span className="text-sm font-bold min-w-[120px] text-center">
                 {format(selectedDate, "yyyy年MM月dd日 (eee)", { locale: ja })}
               </span>
-              {!isToday && (
+              {isToday ? (
+                <span className="text-[10px] bg-orange-500 text-white px-1.5 py-0.5 rounded font-bold">
+                  今日
+                </span>
+              ) : (
                 <button 
                   onClick={() => setSelectedDate(new Date())}
                   className="text-[10px] bg-orange-100 text-orange-600 dark:bg-orange-900/40 dark:text-orange-400 px-1.5 py-0.5 rounded font-bold hover:bg-orange-200 transition-colors"
                 >
-                  今日
+                  今日へ
                 </button>
               )}
             </div>
