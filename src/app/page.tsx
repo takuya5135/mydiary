@@ -217,14 +217,14 @@ export default function HomeView() {
             </div>
           </div>
 
-          {entry?.segments.home && (
+          {entry?.segments?.home && (
             <div className="glass-card p-4 space-y-2 mt-4 border-l-4 border-l-orange-400">
               <div className="flex items-center text-[10px] font-bold text-slate-500 mb-1">
                 <CheckCircle2 size={12} className="mr-1 text-green-500" />
                 LOG (C1) による整理
               </div>
               <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">
-                {entry.segments.home}
+                {entry?.segments?.home}
               </p>
             </div>
           )}
@@ -247,10 +247,10 @@ export default function HomeView() {
           className="animate-slide-up"
           style={{ animationDelay: '0.2s', animationFillMode: 'both' }}
         >
-           {entry?.segments.work && (
+           {entry?.segments?.work && (
             <div className="glass-card p-4 border-l-4 border-l-blue-400">
                <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">
-                {entry.segments.work}
+                {entry?.segments?.work}
               </p>
             </div>
            )}
@@ -280,10 +280,10 @@ export default function HomeView() {
           className="animate-slide-up"
           style={{ animationDelay: '0.3s', animationFillMode: 'both' }}
         >
-           {entry?.segments.hobby && (
+           {entry?.segments?.hobby && (
             <div className="glass-card p-4 mt-4 border-l-4 border-l-emerald-400">
                <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">
-                {entry.segments.hobby}
+                {entry?.segments?.hobby}
               </p>
             </div>
            )}
