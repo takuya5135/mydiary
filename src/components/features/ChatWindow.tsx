@@ -81,10 +81,43 @@ export function ChatWindow({ userId, dateStr, onDateChange }: ChatWindowProps) {
       await saveChatMessage(userId, "user", userMessage, currentPersona);
 
       const [bucketList, dictionary, profile, todaysEntry, recentEntries] = await Promise.all([
-// ... (中略)
+        getBucketList(userId),
+        getDictionary(userId),
+        getUserProfile(userId),
+        getDiaryEntry(userId, dateStr),
+        getRecentEntries(userId, 30)
       ]);
 
-// ... (中略)
+      const bucketListContext = bucketList.map(i => `- ${i.title}`).join("\n");
+      const dictionaryContext = dictionary.map(i => `- ${i.name}: ${i.attributes?.memo || ""}`).join("\n");
+      
+      let profileContext = "未登録";
+      if (profile) {
+        const historyStr = profile.history?.map(h => `${h.from}~${h.to}:${h.description}`).join(", ") || "";
+        profileContext = `持病:${profile.medicalHistory || "なし"}, 経歴:${historyStr}`;
+      }
+
+      let todaysDiaryContext = "未入力";
+      if (todaysEntry?.segments) {
+        todaysDiaryContext = `Home: ${todaysEntry.segments.home}\nWork: ${todaysEntry.segments.work}\nHobby: ${todaysEntry.segments.hobby}`;
+      }
+
+      const pastContext = recentEntries.length > 0
+        ? recentEntries.map((e, idx) => {
+            const dateStr = `【${e.date}】`;
+            if (idx < 3) {
+              return `${dateStr}\n  Home: ${e.segments?.home || "-"}\n  Work: ${e.segments?.work || "-"}\n  Hobby: ${e.segments?.hobby || "-"}`;
+            }
+            if (idx < 14) {
+              return `${dateStr} キーワード: ${e.keywords?.join(", ") || "なし"}`;
+            }
+            return `${dateStr} (記録あり)`;
+          }).join("\n")
+        : "記録なし";
+
+      // @ts-ignore
+      const { getUserToken } = await import("@/lib/firebase/tokens");
+      const googleToken = await getUserToken(userId);
 
       const result = await chatWithAIAction(
         userId,
