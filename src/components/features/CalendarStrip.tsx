@@ -22,15 +22,24 @@ export function CalendarStrip({ userId, date }: CalendarStripProps) {
       setIsLoading(true);
       setError(null);
       try {
-        const result = await getGoogleCalendarAndTasksAction(userId, date);
+        // クライアント側（認証済み）で鍵を取得してサーバーに渡す
+        // @ts-ignore
+        const { getUserToken } = await import("@/lib/firebase/tokens");
+        const token = await getUserToken(userId);
+
+        if (!token) {
+          setError("Google連携が必要です。再ログインを行ってください。");
+          setIsLoading(false);
+          return;
+        }
+
+        const result = await getGoogleCalendarAndTasksAction(token, date);
         
         if (result.success) {
           setEvents(result.events || []);
           setTasks(result.tasks || []);
         } else {
-          if (result.error === "TOKEN_NOT_FOUND") {
-            setError("Google連携が必要です。再ログインを行ってください。");
-          } else if (result.isAuthError) {
+          if (result.isAuthError) {
             setError("Google APIの権限エラーです。APIの有効化を確認するか、再ログインしてください。");
           } else {
             setError("データの読み込みに失敗しました。");

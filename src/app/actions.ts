@@ -162,19 +162,11 @@ export async function chatWithAIAction(
 /**
  * クライアントコンポーネント用。Googleカレンダーとタスクを取得する
  */
-export async function getGoogleCalendarAndTasksAction(userId: string, dateStr: string) {
+export async function getGoogleCalendarAndTasksAction(googleToken: string, dateStr: string) {
   try {
-    // @ts-ignore
-    const { getUserToken } = await import("@/lib/firebase/tokens");
-    const token = await getUserToken(userId);
-    
-    if (!token) {
-      return { success: false, error: "TOKEN_NOT_FOUND" };
-    }
-
     const [events, tasks] = await Promise.all([
-      fetchDailyCalendarEvents(token, dateStr),
-      fetchDailyTasks(token, dateStr)
+      fetchDailyCalendarEvents(googleToken, dateStr),
+      fetchDailyTasks(googleToken, dateStr)
     ]);
 
     return {
