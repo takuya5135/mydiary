@@ -30,9 +30,10 @@ const PERSONAS: PersonaConfig[] = [
 interface ChatWindowProps {
   userId: string;
   dateStr: string;
+  onDateChange?: (date: string) => void;
 }
 
-export function ChatWindow({ userId, dateStr }: ChatWindowProps) {
+export function ChatWindow({ userId, dateStr, onDateChange }: ChatWindowProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -40,14 +41,12 @@ export function ChatWindow({ userId, dateStr }: ChatWindowProps) {
   const [activePersona, setActivePersona] = useState<PersonaId>("log");
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // 初回ロード時に履歴を取得
   useEffect(() => {
     if (isOpen && messages.length === 0) {
       loadMessages();
     }
   }, [isOpen, userId]);
 
-  // 新しいメッセージが来たら一番下へスクロール
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -65,10 +64,9 @@ export function ChatWindow({ userId, dateStr }: ChatWindowProps) {
     if (!input.trim() || isLoading) return;
 
     const userMessage = input.trim();
-    const currentPersona = activePersona; // 送信時の人格を固定
+    const currentPersona = activePersona;
     setInput("");
 
-    // 楽観的UI更新
     const tempUserMsg: ChatMessage = {
       role: "user",
       content: userMessage,
@@ -80,16 +78,14 @@ export function ChatWindow({ userId, dateStr }: ChatWindowProps) {
     setIsLoading(true);
 
     try {
-      // ユーザーのメッセージをFirestoreに保存
       await saveChatMessage(userId, "user", userMessage);
 
-      // 記憶（コンテキスト）の取得
       const [bucketList, dictionary, profile, todaysEntry, recentEntries] = await Promise.all([
         getBucketList(userId),
         getDictionary(userId),
         getUserProfile(userId),
         getDiaryEntry(userId, dateStr),
-        getRecentEntries(userId, 30) // 直近30日分を取得して「外部脳」にする
+        getRecentEntries(userId, 30)
       ]);
 
       const bucketListContext = bucketList.map(i => `- ${i.title}`).join("\n");
@@ -106,19 +102,15 @@ export function ChatWindow({ userId, dateStr }: ChatWindowProps) {
         todaysDiaryContext = `Home: ${todaysEntry.segments.home}\nWork: ${todaysEntry.segments.work}\nHobby: ${todaysEntry.segments.hobby}`;
       }
 
-      // 過去の記録を時系列でコンテキスト化（トークン節約と精度向上のための階層型圧縮）
       const pastContext = recentEntries.length > 0
         ? recentEntries.map((e, idx) => {
             const dateStr = `【${e.date}】`;
-            // 1. 直近3日分：全テキスト（詳細）
             if (idx < 3) {
               return `${dateStr}\n  Home: ${e.segments?.home || "-"}\n  Work: ${e.segments?.work || "-"}\n  Hobby: ${e.segments?.hobby || "-"}`;
             }
-            // 2. 4〜14日分：AI抽出キーワードのみ（中程度）
             if (idx < 14) {
               return `${dateStr} キーワード: ${e.keywords?.join(", ") || "なし"}`;
             }
-            // 3. それ以前：日付のみ（軽量）
             return `${dateStr} (記録あり)`;
           }).join("\n")
         : "記録なし";
@@ -140,11 +132,10 @@ export function ChatWindow({ userId, dateStr }: ChatWindowProps) {
         },
         googleToken || null,
         dateStr,
-        currentPersona // 選択中の人格を渡す
+        currentPersona
       );
 
       if (result.success && result.reply) {
-        // AIの返信をFirestoreに保存 (agentIdを含める)
         await saveChatMessage(userId, "model", result.reply, result.agentId);
 
         const tempAiMsg: ChatMessage = {
@@ -156,8 +147,12 @@ export function ChatWindow({ userId, dateStr }: ChatWindowProps) {
         };
         setMessages([...newHistory, tempAiMsg]);
 
+        // ツール呼び出し（日付ジャンプ）の処理
+        if (result.toolCall?.name === "jump_to_date" && onDateChange) {
+          onDateChange(result.toolCall.args.date);
+        }
+
         if (result.calendarError) {
-          // カレンダーエラーがある場合、システムメッセージ的なものを追加するか、アラートを出す
           console.warn("Calendar token expired. User needs to re-login.");
         }
       } else {
@@ -188,7 +183,6 @@ export function ChatWindow({ userId, dateStr }: ChatWindowProps) {
             exit={{ opacity: 0, y: 50, scale: 0.95 }}
             className="fixed bottom-6 right-6 w-full max-w-sm h-[640px] max-h-[85vh] bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 shadow-2xl rounded-2xl flex flex-col z-50 overflow-hidden"
           >
-            {/* Header / Persona Switcher */}
             <div className="bg-slate-50 dark:bg-zinc-950 border-b border-slate-200 dark:border-zinc-800">
               <div className="flex justify-between items-center px-4 pt-3 pb-1">
                 <div className="flex items-center space-x-2">
@@ -208,7 +202,6 @@ export function ChatWindow({ userId, dateStr }: ChatWindowProps) {
                 </button>
               </div>
 
-              {/* Character Tabs */}
               <div className="flex px-2 pb-2 space-x-1">
                 {PERSONAS.map((p) => (
                   <button
@@ -229,7 +222,6 @@ export function ChatWindow({ userId, dateStr }: ChatWindowProps) {
               </div>
             </div>
 
-            {/* Messages */}
             <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/50 dark:bg-zinc-900/50">
               {messages.length === 0 && !isLoading && (
                 <div className="flex flex-col items-center justify-center h-full text-center space-y-3 opacity-60">
@@ -242,16 +234,11 @@ export function ChatWindow({ userId, dateStr }: ChatWindowProps) {
                 </div>
               )}
               {messages.filter(msg => {
-                // モデルの返信は自分のIDのものだけ表示
                 if (msg.role === "model") return msg.agentId === activePersona;
-                // ユーザーのメッセージは、次のメッセージが現在の人格の返信であるか、
-                // または現在のタブ向けに送られたもの（後述の拡張で対応）を表示
                 return true; 
-              }).map((msg, i, filtered) => {
+              }).map((msg, i) => {
                 const isUser = msg.role === "user";
                 const persona = PERSONAS.find(p => p.id === (msg.agentId || "log"));
-                
-                // ユーザーメッセージの表示フィルタリング（簡易版：直後の返信が自分のでない場合は非表示にするロジックも検討可能だが、一旦は表示）
                 
                 return (
                   <div key={i} className={`flex ${isUser ? "justify-end" : "justify-start"} items-end space-x-2 animate-in fade-in slide-in-from-bottom-2 duration-300`}>
@@ -289,7 +276,6 @@ export function ChatWindow({ userId, dateStr }: ChatWindowProps) {
               )}
             </div>
 
-            {/* Input */}
             <div className="p-3 bg-white dark:bg-zinc-950 border-t border-slate-200 dark:border-zinc-800">
               <div className="flex items-end space-x-2">
                 <textarea
@@ -304,11 +290,6 @@ export function ChatWindow({ userId, dateStr }: ChatWindowProps) {
                   placeholder={`${PERSONAS.find(p => p.id === activePersona)?.name}にメッセージ...`}
                   className="flex-1 bg-slate-100 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl px-3 py-2.5 text-[13px] text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50 resize-none max-h-32 min-h-[44px]"
                   rows={1}
-                  onInput={(e) => {
-                    const target = e.target as HTMLTextAreaElement;
-                    target.style.height = "auto";
-                    target.style.height = Math.min(target.scrollHeight, 120) + "px";
-                  }}
                 />
                 <button
                   onClick={handleSend}

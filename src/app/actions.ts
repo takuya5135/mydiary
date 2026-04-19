@@ -18,32 +18,42 @@ export async function backupToDriveAction(
 
 import { organizeDiary, chatWithCompanion } from "@/lib/ai/huddle";
 import { fetchDailyCalendarEvents } from "@/lib/google/calendar";
+import { fetchDailyTasks } from "@/lib/google/tasks";
 import { ChatMessage, saveChatMessage } from "@/lib/firebase/chat";
+import { searchDiaryEntries } from "@/lib/firebase/entries";
+import { generateEmbedding } from "@/lib/ai/gemini";
 
 export async function organizeDiaryAction(
   rawText: string,
   contextStrings: {
     dictionaryContext: string;
-  }
+  },
+  googleToken: string | null,
+  dateStr: string
 ) {
   try {
-    const result = await organizeDiary(rawText, contextStrings.dictionaryContext);
-    return { success: true, data: result };
+    let calendarContext = "なし";
+    if (googleToken) {
+      const [events, tasks] = await Promise.all([
+        fetchDailyCalendarEvents(googleToken, dateStr),
+        fetchDailyTasks(googleToken, dateStr)
+      ]);
+      const eventStrs = events.map(e => `- [予定] ${e.start}〜${e.end}: ${e.summary}`);
+      const taskStrs = tasks.map(t => `- [タスク] ${t.title}`);
+      if (eventStrs.length > 0 || taskStrs.length > 0) {
+        calendarContext = [...eventStrs, ...taskStrs].join("\n");
+      }
+    }
+
+    const [result, embedding] = await Promise.all([
+      organizeDiary(rawText, contextStrings.dictionaryContext, calendarContext),
+      generateEmbedding(rawText)
+    ]);
+
+    return { success: true, data: result, embedding };
   } catch (error: any) {
     console.error("organizeDiaryAction failed:", error);
-    let availableModelsStr = "";
-    try {
-      const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${process.env.GEMINI_API_KEY}`);
-      if (resp.ok) {
-        const data = await resp.json();
-        const models = data.models
-          .filter((m: any) => m.supportedGenerationMethods?.includes("generateContent"))
-          .map((m: any) => m.name.replace('models/', ''))
-          .join(", ");
-        availableModelsStr = `\n利用可能なモデル一覧: ${models}`;
-      }
-    } catch (_) {}
-    return { success: false, error: error.message + availableModelsStr };
+    return { success: false, error: error.message };
   }
 }
 
@@ -71,8 +81,7 @@ export async function chatWithAIAction(
       try {
         const [events, tasks] = await Promise.all([
           fetchDailyCalendarEvents(googleToken, dateStr),
-          // @ts-ignore
-          import("@/lib/google/tasks").then(mod => mod.fetchDailyTasks(googleToken))
+          fetchDailyTasks(googleToken, dateStr)
         ]);
 
         const eventStrs = events.map(e => `- [予定] ${e.start}〜${e.end}: ${e.summary}`);
@@ -91,7 +100,7 @@ export async function chatWithAIAction(
     }
 
     // AIに問い合わせ
-    const aiResult = await chatWithCompanion(
+    let aiResult = await chatWithCompanion(
       message,
       history,
       contextStrings.pastContext,
@@ -103,12 +112,46 @@ export async function chatWithAIAction(
       persona
     );
 
-    // AIの返信と人格IDを返す
+    // ツール呼び出しのハンドリング
+    if (aiResult.toolCall) {
+      const { name, args } = aiResult.toolCall;
+      
+      if (name === "search_past_diary") {
+        const queryVector = await generateEmbedding(args.query);
+        const searchResults = await searchDiaryEntries(userId, args.query, queryVector);
+        const searchSummary = searchResults.length > 0 
+          ? searchResults.map(r => `【${r.date}】 ${r.rawText.substring(0, 100)}...`).join("\n")
+          : "該当する記録は見つかりませんでした。";
+        
+        // 検索結果をコンテキストに含めて再度AIに回答させる
+        aiResult = await chatWithCompanion(
+          `以下の検索結果に基づいてユーザーに応答してください:\n${searchSummary}`,
+          history,
+          contextStrings.pastContext,
+          contextStrings.bucketListContext,
+          contextStrings.dictionaryContext,
+          contextStrings.profileContext,
+          calendarContext,
+          contextStrings.todaysDiaryContext,
+          persona
+        );
+      } else if (name === "jump_to_date") {
+        // ジャンプの場合は、ツール情報をそのままフロントエンドに返し、フロントエンド側で遷移させる
+        return {
+          success: true,
+          reply: `${args.date}の日記を表示します。`,
+          agentId: aiResult.agentId,
+          toolCall: aiResult.toolCall
+        };
+      }
+    }
+
     return { 
       success: true, 
       reply: aiResult.reply, 
       agentId: aiResult.agentId,
-      calendarError
+      calendarError,
+      toolCall: aiResult.toolCall
     };
   } catch (error: any) {
     console.error("chatWithAIAction failed:", error);

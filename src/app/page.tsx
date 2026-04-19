@@ -104,14 +104,6 @@ Updated at: ${entry.updatedAt ? entry.updatedAt.toDate().toLocaleString() : "不
     setEntry(data);
   };
 
-  if (loading || !user) {
-    return (
-      <div className="h-screen w-full flex items-center justify-center bg-slate-950">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-orange-500" />
-      </div>
-    );
-  }
-
   const handleLogout = async () => {
     await logout();
   };
@@ -120,7 +112,6 @@ Updated at: ${entry.updatedAt ? entry.updatedAt.toDate().toLocaleString() : "不
 
   useEffect(() => {
     setNow(new Date());
-    // 1分ごとに現在時刻を更新
     const timer = setInterval(() => setNow(new Date()), 60000);
     return () => clearInterval(timer);
   }, []);
@@ -145,6 +136,21 @@ Updated at: ${entry.updatedAt ? entry.updatedAt.toDate().toLocaleString() : "不
     });
     fetchEntry();
   };
+
+  const handleDateChange = (newDateStr: string) => {
+    const newDate = new Date(newDateStr);
+    if (!isNaN(newDate.getTime())) {
+      setSelectedDate(newDate);
+    }
+  };
+
+  if (loading || !user) {
+    return (
+      <div className="h-screen w-full flex items-center justify-center bg-slate-950">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-orange-500" />
+      </div>
+    );
+  }
 
   return (
     <main className="min-h-screen w-full bg-gradient-to-br from-slate-50 to-slate-100 dark:from-zinc-950 dark:to-zinc-900 flex flex-col pb-10">
@@ -221,7 +227,6 @@ Updated at: ${entry.updatedAt ? entry.updatedAt.toDate().toLocaleString() : "不
       </header>
 
       <div className="main-layout flex flex-col md:flex-row">
-        {/* --- LEFT PANE (INPUT) --- */}
         <aside className="left-pane animate-slide-up">
           <div className="sticky top-28 space-y-6">
             <DiaryInput 
@@ -242,10 +247,8 @@ Updated at: ${entry.updatedAt ? entry.updatedAt.toDate().toLocaleString() : "不
           </div>
         </aside>
 
-        {/* --- RIGHT PANE (OUTPUT) --- */}
         <section className="right-pane">
           <div className="space-y-6">
-            {/* VISUAL HIGHLIGHTS (GALLERY) */}
             <div className="glass-panel p-6 animate-slide-up">
               <div className="flex items-center space-x-3 mb-6">
                 <div className="bg-orange-100 dark:bg-orange-900/40 p-2 rounded-lg text-orange-600 dark:text-orange-400">
@@ -264,12 +267,7 @@ Updated at: ${entry.updatedAt ? entry.updatedAt.toDate().toLocaleString() : "不
               />
             </div>
 
-            {/* HOME COLUMN */}
-            <Column
-              id="home"
-              title="Home"
-              icon={<Home size={28} />}
-            >
+            <Column id="home" title="Home" icon={<Home size={28} />}>
               <div className="grid grid-cols-2 gap-4 mb-4">
                 <button 
                   onClick={() => handleHealthCheckClick('morning')}
@@ -302,7 +300,6 @@ Updated at: ${entry.updatedAt ? entry.updatedAt.toDate().toLocaleString() : "不
               )}
             </Column>
 
-            {/* WORK COLUMN */}
             <Column id="work" title="Work" icon={<Briefcase size={28} />}>
                {entry?.segments?.work ? (
                 <div className="mt-4 border-l-4 border-l-blue-400 pl-4 bg-blue-50/20 dark:bg-blue-950/10 py-2 rounded-r-xl">
@@ -317,7 +314,6 @@ Updated at: ${entry.updatedAt ? entry.updatedAt.toDate().toLocaleString() : "不
                )}
             </Column>
 
-            {/* HOBBY COLUMN */}
             <Column id="hobby" title="Hobby" icon={<Heart size={28} />}>
                {entry?.segments?.hobby ? (
                 <div className="mt-4 border-l-4 border-l-emerald-400 pl-4 bg-emerald-50/20 dark:bg-emerald-950/10 py-2 rounded-r-xl">
@@ -343,7 +339,7 @@ Updated at: ${entry.updatedAt ? entry.updatedAt.toDate().toLocaleString() : "不
         currentData={healthModalType ? entry?.healthData?.[healthModalType] : undefined}
         isOpen={healthModalType !== null} onClose={() => setHealthModalType(null)} onSaved={fetchEntry}
       />
-      <ChatWindow userId={user.uid} dateStr={dateStr} />
+      <ChatWindow userId={user.uid} dateStr={dateStr} onDateChange={handleDateChange} />
     </main>
   );
 }

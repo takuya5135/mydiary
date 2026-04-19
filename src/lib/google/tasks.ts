@@ -6,25 +6,19 @@ export interface GoogleTask {
   due?: string;
 }
 
-export async function fetchDailyTasks(token: string): Promise<GoogleTask[]> {
+export async function fetchDailyTasks(token: string, dateStr: string): Promise<GoogleTask[]> {
   try {
-    // 1. タスクリスト一覧を取得
     const listsRes = await fetch("https://www.googleapis.com/tasks/v1/users/@me/lists", {
       headers: { Authorization: `Bearer ${token}` }
     });
 
-    if (!listsRes.ok) {
-      console.warn("Google Tasks API (Lists) Error:", listsRes.status);
-      return [];
-    }
+    if (!listsRes.ok) return [];
 
     const { items: lists } = await listsRes.json();
     if (!lists || lists.length === 0) return [];
 
     let allTasks: GoogleTask[] = [];
 
-    // 2. 各リストからタスクを取得 (本来は並列実行が望ましいが、シンプルに最初のリストかメインリストを優先)
-    // ここではすべてのリストを回って未完了タスクを集める
     for (const list of lists) {
       const tasksRes = await fetch(`https://www.googleapis.com/tasks/v1/lists/${list.id}/tasks?showCompleted=false`, {
         headers: { Authorization: `Bearer ${token}` }
@@ -33,7 +27,13 @@ export async function fetchDailyTasks(token: string): Promise<GoogleTask[]> {
       if (tasksRes.ok) {
         const { items: tasks } = await tasksRes.json();
         if (tasks) {
-          allTasks = [...allTasks, ...tasks];
+          // 日付が一致するものだけをフィルタリング (YYYY-MM-DD かどうかで判定)
+          const filtered = tasks.filter((t: any) => {
+            if (!t.due) return false;
+            // Google Tasks の due は "YYYY-MM-DDTHH:MM:SSZ" 形式
+            return t.due.startsWith(dateStr);
+          });
+          allTasks = [...allTasks, ...filtered];
         }
       }
     }

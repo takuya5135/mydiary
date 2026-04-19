@@ -45,6 +45,7 @@ export interface DiaryEntry {
   };
   photos?: string[];
   updatedAt?: Timestamp;
+  embedding?: number[]; // ベクトル検索用 (Phase 2)
 }
 
 const COLLECTION_NAME = "entries";
@@ -96,6 +97,54 @@ export const getRecentEntries = async (userId: string, count: number = 10): Prom
       .slice(0, count);
   } catch (error) {
     console.error("getRecentEntries failed:", error);
+    return [];
+  }
+};
+
+/**
+ * 過去日記の検索 (ベクトル検索 & キーワード検索)
+ */
+export const searchDiaryEntries = async (
+  userId: string, 
+  queryText: string, 
+  queryVector?: number[]
+): Promise<DiaryEntry[]> => {
+  try {
+    // 1. ベクトル検索 (曖昧検索) が可能な場合
+    if (queryVector && queryVector.length > 0) {
+      try {
+        // @ts-ignore
+        const q = vectorQuery(
+          collection(serverDb, COLLECTION_NAME),
+          "embedding",
+          // @ts-ignore
+          findNearest(VectorValue.fromArray(queryVector), {
+            limit: 10,
+            distanceMeasure: "COSINE"
+          })
+        );
+        // ベクトル検索にユーザーIDフィルタを直接かけられない場合があるため、結果をフィルタリング
+        const querySnapshot = await getDocs(q);
+        return querySnapshot.docs
+          .map(doc => doc.data() as DiaryEntry)
+          .filter(entry => entry.userId === userId);
+      } catch (vecErr) {
+        console.warn("Vector search failed, falling back to keyword:", vecErr);
+      }
+    }
+
+    // 2. キーワード検索 (フォールバック)
+    const q = query(
+      collection(serverDb, COLLECTION_NAME),
+      where("userId", "==", userId),
+      where("keywords", "array-contains", queryText)
+    );
+    const querySnapshot = await getDocs(q);
+    const results = querySnapshot.docs.map(doc => doc.data() as DiaryEntry);
+    
+    return results.sort((a, b) => b.date.localeCompare(a.date));
+  } catch (error) {
+    console.error("searchDiaryEntries failed:", error);
     return [];
   }
 };

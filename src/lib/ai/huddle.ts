@@ -1,4 +1,4 @@
-import { getGeminiModel } from "./gemini";
+import { getGeminiModel, MODELS } from "./gemini";
 import { ChatMessage } from "../firebase/chat";
 
 export interface DictionarySuggestion {
@@ -11,35 +11,38 @@ export interface OrganizeResult {
   home: string;
   work: string;
   hobby: string;
-  keywords: string[]; // 追加
+  keywords: string[];
   dictionarySuggestions: DictionarySuggestion[];
 }
 
 export const organizeDiary = async (
   rawText: string, 
   dictionaryContext: string,
+  calendarContext: string = "なし",
 ): Promise<OrganizeResult> => {
-  const model = getGeminiModel();
+  const model = getGeminiModel(MODELS.MAIN);
 
   const prompt = `
 あなたは優秀な秘書エージェントです。
-ユーザーから投げられた支離滅裂なメモや日記のダンプ（"あー"や"えー"などの不要な言葉が含まれている場合あり）を、以下の3つのカテゴリ（Home, Work, Hobby）に整理・清書してください。
+ユーザーから投げられた支離滅裂なメモや日記のダンプを、以下の3つのカテゴリ（Home, Work, Hobby）に整理・清書してください。
 
 ### ユーザーの入力 (raw text):
 """
 ${rawText}
 """
 
-### 固有名詞辞書 (ユーザー独自の用語・人物・場所):
+### 今日の予定・タスク (Google連携):
+${calendarContext}
+
+### 固有名詞辞書:
 ${dictionaryContext || "未登録"}
-（※入力内に未知の固有名詞らしきものがあれば、推測して文脈を壊さないように整形してください）
 
 ### 出力要件:
-1. 「Home（家庭や生活）」、「Work（仕事やキャリア）」、「Hobby（趣味や自己研鑽・バケットリスト）」に関わる内容に仕分けてください。
-2. 内容が無い場合は空文字（""）にしてください。
+1. 「Home」、「Work」、「Hobby」に仕分けてください。
+2. **Google連携情報の記録**: 「今日の予定・タスク」にある項目を、内容に応じて適切なカテゴリの末尾に「箇条書きでそのまま」転記してください。
 3. 文体は「だ・である」調（常体）で簡潔に。AIの意見やコメントは厳禁。
-4. **キーワード抽出**: 後の検索のために、内容を象徴するキーワードや重要語句（人名、場所、出来事など）を最大10個抽出してください。
-5. **辞書への追加提案**: 今後も登場しそうな重要な固有名詞があれば抽出してください。
+4. **キーワード抽出**: 重要な固有名詞や出来事を最大10個。
+5. **辞書への追加提案**: 新しい固有名詞があれば抽出。
 
 ### 出力フォーマット (JSON形式のみ):
 {
@@ -52,7 +55,7 @@ ${dictionaryContext || "未登録"}
   ]
 }
 `;
-
+// ... (中略、実装は変更なし)
   try {
     let attempts = 0;
     let responseText = "";
@@ -84,6 +87,10 @@ ${dictionaryContext || "未登録"}
 export interface ChatCompanionResult {
   agentId: "log" | "mamo" | "waku" | "zen";
   reply: string;
+  toolCall?: {
+    name: string;
+    args: any;
+  };
 }
 
 export const chatWithCompanion = async (
@@ -97,9 +104,51 @@ export const chatWithCompanion = async (
   todaysDiaryContext: string,
   targetPersona?: "log" | "mamo" | "waku" | "zen"
 ): Promise<ChatCompanionResult> => {
-  const model = getGeminiModel();
+  // 人格に応じてモデルを切り分け (ZENはPRO、その他はMAIN)
+  const selectedModelId = targetPersona === "zen" ? MODELS.PRO : MODELS.MAIN;
+  
+  // ツール（関数呼び出し）の定義
+  const tools = [
+    {
+      functionDeclarations: [
+        {
+          name: "search_past_diary",
+          description: "ユーザーの過去の日記（全期間）からキーワードで検索し、該当する日付と内容を特定します。大昔の出来事を知りたい時に使用します。",
+          parameters: {
+            type: "object",
+            properties: {
+              query: {
+                type: "string",
+                description: "検索するキーワードや文章"
+              }
+            },
+            required: ["query"]
+          }
+        },
+        {
+          name: "jump_to_date",
+          description: "特定の日付の日記画面へジャンプ（移動）します。検索で見つかった日付へ移動したい時に使用します。",
+          parameters: {
+            type: "object",
+            properties: {
+              date: {
+                type: "string",
+                description: "移動先の日付 (YYYY-MM-DD)"
+              }
+            },
+            required: ["date"]
+          }
+        }
+      ]
+    }
+  ];
+
+  const model = getGeminiModel(selectedModelId);
+  // @ts-ignore (最新SDKの型定義対応)
+  model.tools = tools;
 
   const personaInstructions = {
+    // ... (前回定義した指示を維持)
     log: `
 # LOG (合理的な秘書 / 外部脳)
 - **役割**: 事実の記録、データの正確な呼び出し、進捗の分析、今後の具体的な段取り（タスク）の提案。
@@ -185,6 +234,20 @@ ${pastContext || "なし"}
     while (attempts < 3) {
       try {
         const response = await model.generateContent({ contents });
+        
+        // ツール（関数呼び出し）のチェック
+        const functionCalls = response.response.functionCalls();
+        if (functionCalls && functionCalls.length > 0) {
+          return {
+            agentId: targetPersona || "log",
+            reply: "データを取得します...",
+            toolCall: {
+              name: functionCalls[0].name,
+              args: functionCalls[0].args
+            }
+          };
+        }
+
         responseText = response.response.text();
         break;
       } catch (error: any) {
@@ -199,8 +262,16 @@ ${pastContext || "なし"}
       }
     }
 
-    const jsonStr = responseText.replace(/```json\n?|```/g, "").trim();
-    return JSON.parse(jsonStr) as ChatCompanionResult;
+    try {
+      const jsonStr = responseText.replace(/```json\n?|```/g, "").trim();
+      return JSON.parse(jsonStr) as ChatCompanionResult;
+    } catch (e) {
+      // JSON形式でない場合、プレーンテキストをパースして返す
+      return {
+        agentId: targetPersona || "log",
+        reply: responseText
+      };
+    }
   } catch (error: any) {
     console.error("Chat generation failed after retries:", error);
     throw error;

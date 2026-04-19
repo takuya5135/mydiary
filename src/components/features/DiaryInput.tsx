@@ -70,10 +70,15 @@ export function DiaryInput({ userId, date, onSave, onOrganizeTrigger }: DiaryInp
         .map(item => `- ${item.name} (${item.aliases.join(", ")}): ${item.attributes?.memo || ""}`)
         .join("\n");
 
+      // Google Token の取得 (カレンダー連携のため)
+      // @ts-ignore
+      const { getUserToken } = await import("@/lib/firebase/tokens");
+      const googleToken = await getUserToken(userId);
+
       // 3. Server ActionでGemini API呼び出し
       const result = await organizeDiaryAction(text, {
         dictionaryContext,
-      });
+      }, googleToken || null, date);
 
       if (result.success && result.data) {
         // 4. クライアント側でFirestoreに保存
@@ -83,6 +88,7 @@ export function DiaryInput({ userId, date, onSave, onOrganizeTrigger }: DiaryInp
           rawText: text,
           segments: result.data,
           keywords: result.data.keywords, // キーワードを保存
+          embedding: result.embedding, // ベクトルデータを保存
         });
         
         // 4.5 提案をセット
