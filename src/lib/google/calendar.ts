@@ -41,6 +41,11 @@ export async function fetchDailyCalendarEvents(token: string, dateStr: string): 
         headers: { Authorization: `Bearer ${token}` }
       });
 
+      if (res.status === 401 || res.status === 403) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(`GOOGLE_API_ERROR: ${res.status} ${errorData.error?.message || ""}`);
+      }
+
       if (res.ok) {
         const data = await res.json();
         if (data.items) {
@@ -60,7 +65,8 @@ export async function fetchDailyCalendarEvents(token: string, dateStr: string): 
     // IDで重複排除し、開始時間でソート
     return Array.from(new Map(allEvents.map(e => [e.id, e])).values())
       .sort((a, b) => a.start.localeCompare(b.start));
-  } catch (error) {
+  } catch (error: any) {
+    if (error.message?.includes("GOOGLE_API_ERROR")) throw error;
     console.error("fetchDailyCalendarEvents error:", error);
     return [];
   }

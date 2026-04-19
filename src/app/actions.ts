@@ -158,3 +158,37 @@ export async function chatWithAIAction(
     return { success: false, error: error.message };
   }
 }
+
+/**
+ * クライアントコンポーネント用。Googleカレンダーとタスクを取得する
+ */
+export async function getGoogleCalendarAndTasksAction(userId: string, dateStr: string) {
+  try {
+    // @ts-ignore
+    const { getUserToken } = await import("@/lib/firebase/tokens");
+    const token = await getUserToken(userId);
+    
+    if (!token) {
+      return { success: false, error: "TOKEN_NOT_FOUND" };
+    }
+
+    const [events, tasks] = await Promise.all([
+      fetchDailyCalendarEvents(token, dateStr),
+      fetchDailyTasks(token, dateStr)
+    ]);
+
+    return {
+      success: true,
+      events,
+      tasks
+    };
+  } catch (error: any) {
+    console.error("getGoogleCalendarAndTasksAction error:", error);
+    // 403エラー（API無効化など）の情報をフロントへ流す
+    return { 
+      success: false, 
+      error: error.message || "Unknown Error",
+      isAuthError: error.message?.includes("401") || error.message?.includes("403")
+    };
+  }
+}

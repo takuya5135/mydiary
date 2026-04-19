@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { Calendar as CalendarIcon, Clock, AlertCircle, CheckCircle2, ListTodo } from "lucide-react";
-import { fetchDailyCalendarEvents, CalendarEvent } from "@/lib/google/calendar";
-import { fetchDailyTasks, GoogleTask } from "@/lib/google/tasks";
-import { getUserToken } from "@/lib/firebase/tokens";
+import { CalendarEvent } from "@/lib/google/calendar";
+import { GoogleTask } from "@/lib/google/tasks";
+import { getGoogleCalendarAndTasksAction } from "@/app/actions";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
 
@@ -22,22 +22,23 @@ export function CalendarStrip({ userId, date }: CalendarStripProps) {
       setIsLoading(true);
       setError(null);
       try {
-        const token = await getUserToken(userId);
-        if (!token) {
-          setError("Google連携が必要です。再ログインを行ってください。");
-          return;
-        }
-
-        const [fetchedEvents, fetchedTasks] = await Promise.all([
-          fetchDailyCalendarEvents(token, date),
-          fetchDailyTasks(token, date)
-        ]);
+        const result = await getGoogleCalendarAndTasksAction(userId, date);
         
-        setEvents(fetchedEvents);
-        setTasks(fetchedTasks);
+        if (result.success) {
+          setEvents(result.events || []);
+          setTasks(result.tasks || []);
+        } else {
+          if (result.error === "TOKEN_NOT_FOUND") {
+            setError("Google連携が必要です。再ログインを行ってください。");
+          } else if (result.isAuthError) {
+            setError("Google APIの権限エラーです。APIの有効化を確認するか、再ログインしてください。");
+          } else {
+            setError("データの読み込みに失敗しました。");
+          }
+        }
       } catch (err: any) {
         console.error("CalendarStrip load error:", err);
-        setError("データの読み込みに失敗しました。");
+        setError("通信エラーが発生しました。");
       } finally {
         setIsLoading(false);
       }

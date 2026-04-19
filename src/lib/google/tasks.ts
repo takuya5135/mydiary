@@ -12,7 +12,12 @@ export async function fetchDailyTasks(token: string, dateStr: string): Promise<G
       headers: { Authorization: `Bearer ${token}` }
     });
 
-    if (!listsRes.ok) return [];
+    if (!listsRes.ok) {
+      if (listsRes.status === 401 || listsRes.status === 403) {
+        throw new Error(`GOOGLE_API_ERROR: ${listsRes.status}`);
+      }
+      return [];
+    }
 
     const { items: lists } = await listsRes.json();
     if (!lists || lists.length === 0) return [];
@@ -24,10 +29,14 @@ export async function fetchDailyTasks(token: string, dateStr: string): Promise<G
         headers: { Authorization: `Bearer ${token}` }
       });
 
+      if (tasksRes.status === 401 || tasksRes.status === 403) {
+        throw new Error(`GOOGLE_API_ERROR: ${tasksRes.status}`);
+      }
+
       if (tasksRes.ok) {
         const { items: tasks } = await tasksRes.json();
         if (tasks) {
-          // 日付が一致するものだけをフィルタリング (YYYY-MM-DD かどうかで判定)
+          // 日付が一致するものだけをフィルタリング
           const filtered = tasks.filter((t: any) => {
             if (!t.due) return false;
             // Google Tasks の due は "YYYY-MM-DDTHH:MM:SSZ" 形式
@@ -45,7 +54,8 @@ export async function fetchDailyTasks(token: string, dateStr: string): Promise<G
       status: t.status,
       due: t.due
     }));
-  } catch (error) {
+  } catch (error: any) {
+    if (error.message?.includes("GOOGLE_API_ERROR")) throw error;
     console.error("fetchDailyTasks error:", error);
     return [];
   }
