@@ -6,7 +6,7 @@ import { useAuth } from "@/components/providers/AuthProvider";
 import { 
   Home, Briefcase, Heart, Sun, Moon, Trophy, Plus, LogOut, CheckCircle2,
   ChevronLeft, ChevronRight, Calendar as CalendarIcon, Book, CloudUpload,
-  CalendarDays
+  CalendarDays, Search
 } from "lucide-react";
 import { format, addDays, subDays, isSameDay } from "date-fns";
 import { ja } from "date-fns/locale";
@@ -14,6 +14,7 @@ import { Column } from "@/components/layout/Column";
 import { logout } from "@/lib/firebase/auth";
 import { BucketListModal } from "@/components/features/BucketListModal";
 import { DictionaryModal } from "@/components/features/DictionaryModal";
+import { SearchModal } from "@/components/features/SearchModal";
 import { ProfileModal } from "@/components/features/ProfileModal";
 import { HealthCheckModal } from "@/components/features/HealthCheckModal";
 import { PhotoCuration } from "@/components/features/PhotoCuration";
@@ -30,6 +31,7 @@ export default function HomeView() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [isBucketModalOpen, setIsBucketModalOpen] = useState(false);
   const [isDictModalOpen, setIsDictModalOpen] = useState(false);
+  const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [healthModalType, setHealthModalType] = useState<"morning" | "evening" | null>(null);
   const [isBackingUp, setIsBackingUp] = useState(false);
@@ -246,6 +248,14 @@ Updated at: ${entry.updatedAt ? entry.updatedAt.toDate().toLocaleString() : "不
             <Book size={16} className="text-orange-500" />
             <span className="btn-text-fix">ナレッジ・ベース</span>
           </button>
+
+          <button 
+            onClick={() => setIsSearchModalOpen(true)}
+            className="flex items-center space-x-2 px-4 py-2 rounded-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-all text-xs font-bold shadow-sm"
+          >
+            <Search size={16} className="text-blue-500" />
+            <span className="btn-text-fix">検索</span>
+          </button>
           
           <button 
             onClick={() => setIsProfileModalOpen(true)}
@@ -370,6 +380,7 @@ Updated at: ${entry.updatedAt ? entry.updatedAt.toDate().toLocaleString() : "不
 
       <BucketListModal userId={user.uid} isOpen={isBucketModalOpen} onClose={() => setIsBucketModalOpen(false)} />
       <DictionaryModal userId={user.uid} isOpen={isDictModalOpen} onClose={() => setIsDictModalOpen(false)} />
+      <SearchModal userId={user.uid} isOpen={isSearchModalOpen} onClose={() => setIsSearchModalOpen(false)} onDateChange={handleDateChange} />
       <ProfileModal userId={user.uid} isOpen={isProfileModalOpen} onClose={() => setIsProfileModalOpen(false)} />
       <HealthCheckModal 
         userId={user.uid} date={dateStr} type={healthModalType}

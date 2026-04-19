@@ -22,6 +22,9 @@ import { fetchDailyTasks } from "@/lib/google/tasks";
 import { ChatMessage, saveChatMessage } from "@/lib/firebase/chat";
 import { searchDiaryEntries } from "@/lib/firebase/entries";
 import { generateEmbedding } from "@/lib/ai/gemini";
+import { getDictionary } from "@/lib/firebase/dictionary";
+import { collection, query, where, getDocs } from "firebase/firestore";
+import { db as serverDb } from "@/lib/firebase/config";
 
 export async function organizeDiaryAction(
   rawText: string,
@@ -141,9 +144,6 @@ export async function chatWithAIAction(
           : "該当する記録は見つかりませんでした。";
         
         // 履歴を更新してAIに再答させる
-        // 1. ユーザーの元の質問を追加
-        // 2. AIの「データを取得します」という返答（モデルのターン）を追加
-        // 3. 検索結果（ツール出力のターン）を追加してループを回す
         currentHistory = [
           ...currentHistory,
           { role: "user", content: currentMessage, createdAt: new Date() as any },
@@ -188,11 +188,46 @@ export async function getGoogleCalendarAndTasksAction(googleToken: string, dateS
     };
   } catch (error: any) {
     console.error("getGoogleCalendarAndTasksAction error:", error);
-    // 403エラー（API無効化など）の情報をフロントへ流す
     return { 
       success: false, 
       error: error.message || "Unknown Error",
       isAuthError: error.message?.includes("401") || error.message?.includes("403")
     };
+  }
+}
+
+/**
+ * 検索用に全日記データを取得する (サーバー側で一度に取得)
+ */
+export async function getAllDiaryEntriesSummaryAction(userId: string) {
+  try {
+    const q = query(
+      collection(serverDb, "entries"),
+      where("userId", "==", userId)
+    );
+    const querySnapshot = await getDocs(q);
+    // @ts-ignore
+    const entries = querySnapshot.docs.map(doc => doc.data());
+    
+    return {
+      success: true,
+      entries
+    };
+  } catch (error: any) {
+    console.error("getAllDiaryEntriesSummaryAction error:", error);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * 検索用に辞書データを取得する
+ */
+export async function getDictionaryAction(userId: string) {
+  try {
+    const dictionary = await getDictionary(userId);
+    return { success: true, dictionary };
+  } catch (error: any) {
+    console.error("getDictionaryAction error:", error);
+    return { success: false, error: error.message };
   }
 }
