@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Book, X, Plus, Trash2, User, MapPin, Building, Tag, Save } from "lucide-react";
+import { Book, X, Plus, Trash2, User, MapPin, Building, Tag, Save, Search } from "lucide-react";
 import { DictionaryItem, getDictionary, upsertDictionaryItem, deleteDictionaryItem } from "@/lib/firebase/dictionary";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -15,6 +15,8 @@ export function DictionaryModal({ userId, isOpen, onClose }: DictionaryModalProp
   const [items, setItems] = useState<DictionaryItem[]>([]);
   const [editingItem, setEditingItem] = useState<Partial<DictionaryItem> | null>(null);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
 
   useEffect(() => {
     if (isOpen) {
@@ -62,6 +64,18 @@ export function DictionaryModal({ userId, isOpen, onClose }: DictionaryModalProp
     { id: "custom", label: "その他", icon: <Tag size={16} /> },
   ];
 
+  // フィルタリング
+  const filteredItems = items.filter(item => {
+    const matchesSearch = 
+      item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.aliases.some(a => a.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (item.attributes?.memo?.toLowerCase().includes(searchQuery.toLowerCase()));
+    
+    const matchesCategory = selectedCategory === "all" || item.category === selectedCategory;
+    
+    return matchesSearch && matchesCategory;
+  });
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -80,7 +94,7 @@ export function DictionaryModal({ userId, isOpen, onClose }: DictionaryModalProp
             className="relative w-full max-w-4xl glass-panel overflow-hidden shadow-2xl flex flex-col md:flex-row h-[80vh]"
           >
             {/* Sidebar / List */}
-            <div className="w-full md:w-72 border-r border-white/10 flex flex-col bg-slate-900/20">
+            <div className="w-full md:w-80 border-r border-white/10 flex flex-col bg-slate-900/20">
               <header className="p-4 border-b border-white/10 flex justify-between items-center">
                 <div className="flex items-center space-x-2 text-white">
                   <Book size={20} className="text-orange-500" />
@@ -93,8 +107,44 @@ export function DictionaryModal({ userId, isOpen, onClose }: DictionaryModalProp
                   <Plus size={20} />
                 </button>
               </header>
+
+              {/* Search & Filter */}
+              <div className="p-3 space-y-3 border-b border-white/5 bg-black/20">
+                <div className="relative">
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="検索..."
+                    className="w-full bg-slate-950/40 border border-white/10 rounded-lg pl-9 pr-3 py-1.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-orange-500 transition-all"
+                  />
+                </div>
+                <div className="flex flex-wrap gap-1">
+                  <button
+                    onClick={() => setSelectedCategory("all")}
+                    className={`px-2 py-1 rounded text-[10px] font-bold transition-all ${
+                      selectedCategory === "all" ? "bg-white/20 text-white" : "text-slate-500 hover:text-slate-300"
+                    }`}
+                  >
+                    すべて
+                  </button>
+                  {categories.map(cat => (
+                    <button
+                      key={cat.id}
+                      onClick={() => setSelectedCategory(cat.id)}
+                      className={`px-2 py-1 rounded text-[10px] font-bold transition-all ${
+                        selectedCategory === cat.id ? "bg-white/20 text-white" : "text-slate-500 hover:text-slate-300"
+                      }`}
+                    >
+                      {cat.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <div className="flex-1 overflow-y-auto p-2 space-y-1">
-                {items.map(item => (
+                {filteredItems.map(item => (
                   <button
                     key={item.id}
                     onClick={() => setEditingItem(item)}
