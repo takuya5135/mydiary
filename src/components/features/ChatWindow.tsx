@@ -78,51 +78,18 @@ export function ChatWindow({ userId, dateStr, onDateChange }: ChatWindowProps) {
     setIsLoading(true);
 
     try {
-      await saveChatMessage(userId, "user", userMessage);
+      await saveChatMessage(userId, "user", userMessage, currentPersona);
 
       const [bucketList, dictionary, profile, todaysEntry, recentEntries] = await Promise.all([
-        getBucketList(userId),
-        getDictionary(userId),
-        getUserProfile(userId),
-        getDiaryEntry(userId, dateStr),
-        getRecentEntries(userId, 30)
+// ... (中略)
       ]);
 
-      const bucketListContext = bucketList.map(i => `- ${i.title}`).join("\n");
-      const dictionaryContext = dictionary.map(i => `- ${i.name}: ${i.attributes?.memo || ""}`).join("\n");
-      
-      let profileContext = "未登録";
-      if (profile) {
-        const historyStr = profile.history?.map(h => `${h.from}~${h.to}:${h.description}`).join(", ") || "";
-        profileContext = `持病:${profile.medicalHistory || "なし"}, 経歴:${historyStr}`;
-      }
-
-      let todaysDiaryContext = "未入力";
-      if (todaysEntry?.segments) {
-        todaysDiaryContext = `Home: ${todaysEntry.segments.home}\nWork: ${todaysEntry.segments.work}\nHobby: ${todaysEntry.segments.hobby}`;
-      }
-
-      const pastContext = recentEntries.length > 0
-        ? recentEntries.map((e, idx) => {
-            const dateStr = `【${e.date}】`;
-            if (idx < 3) {
-              return `${dateStr}\n  Home: ${e.segments?.home || "-"}\n  Work: ${e.segments?.work || "-"}\n  Hobby: ${e.segments?.hobby || "-"}`;
-            }
-            if (idx < 14) {
-              return `${dateStr} キーワード: ${e.keywords?.join(", ") || "なし"}`;
-            }
-            return `${dateStr} (記録あり)`;
-          }).join("\n")
-        : "記録なし";
-
-      // @ts-ignore
-      const { getUserToken } = await import("@/lib/firebase/tokens");
-      const googleToken = await getUserToken(userId);
+// ... (中略)
 
       const result = await chatWithAIAction(
         userId,
         userMessage,
-        messages,
+        messages.filter(m => m.agentId === currentPersona), // このキャラのスレッド履歴のみ渡す
         {
           bucketListContext,
           dictionaryContext,
@@ -145,7 +112,10 @@ export function ChatWindow({ userId, dateStr, onDateChange }: ChatWindowProps) {
           // @ts-ignore
           createdAt: { toDate: () => new Date() }
         };
-        setMessages([...newHistory, tempAiMsg]);
+        
+        // ユーザー自身のメッセージも agentId 付きで履歴に反映
+        const finalUserMsg: ChatMessage = { ...tempUserMsg, agentId: currentPersona };
+        setMessages(prev => [...prev.filter(m => m !== tempUserMsg), finalUserMsg, tempAiMsg]);
 
         // ツール呼び出し（日付ジャンプ）の処理
         if (result.toolCall?.name === "jump_to_date" && onDateChange) {
@@ -234,8 +204,8 @@ export function ChatWindow({ userId, dateStr, onDateChange }: ChatWindowProps) {
                 </div>
               )}
               {messages.filter(msg => {
-                if (msg.role === "model") return msg.agentId === activePersona;
-                return true; 
+                // キャラクターごとのスレッド分離
+                return msg.agentId === activePersona;
               }).map((msg, i) => {
                 const isUser = msg.role === "user";
                 const persona = PERSONAS.find(p => p.id === (msg.agentId || "log"));

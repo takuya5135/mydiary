@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { 
   Home, Briefcase, Heart, Sun, Moon, Trophy, Plus, LogOut, CheckCircle2,
-  ChevronLeft, ChevronRight, Calendar as CalendarIcon, Book, CloudUpload
+  ChevronLeft, ChevronRight, Calendar as CalendarIcon, Book, CloudUpload,
+  CalendarDays
 } from "lucide-react";
 import { format, addDays, subDays, isSameDay } from "date-fns";
 import { ja } from "date-fns/locale";
@@ -33,6 +34,8 @@ export default function HomeView() {
   const [healthModalType, setHealthModalType] = useState<"morning" | "evening" | null>(null);
   const [isBackingUp, setIsBackingUp] = useState(false);
   const [entry, setEntry] = useState<DiaryEntry | null>(null);
+  
+  const dateInputRef = useRef<HTMLInputElement>(null);
 
   const dateStr = format(selectedDate, "yyyy-MM-dd");
 
@@ -83,6 +86,32 @@ Updated at: ${entry.updatedAt ? entry.updatedAt.toDate().toLocaleString() : "不
       alert("予期しない通信エラーが発生しました。");
     } finally {
       setIsBackingUp(false);
+    }
+  };
+
+  const handleDateSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newDate = new Date(e.target.value);
+    if (!isNaN(newDate.getTime())) {
+      setSelectedDate(newDate);
+    }
+  };
+
+  const triggerDatePicker = () => {
+    if (dateInputRef.current) {
+      // @ts-ignore
+      if (typeof dateInputRef.current.showPicker === 'function') {
+        // @ts-ignore
+        dateInputRef.current.showPicker();
+      } else {
+        dateInputRef.current.click();
+      }
+    }
+  };
+
+  const handleDateChange = (newDateStr: string) => {
+    const newDate = new Date(newDateStr);
+    if (!isNaN(newDate.getTime())) {
+      setSelectedDate(newDate);
     }
   };
 
@@ -137,13 +166,6 @@ Updated at: ${entry.updatedAt ? entry.updatedAt.toDate().toLocaleString() : "不
     fetchEntry();
   };
 
-  const handleDateChange = (newDateStr: string) => {
-    const newDate = new Date(newDateStr);
-    if (!isNaN(newDate.getTime())) {
-      setSelectedDate(newDate);
-    }
-  };
-
   if (loading || !user) {
     return (
       <div className="h-screen w-full flex items-center justify-center bg-slate-950">
@@ -160,21 +182,36 @@ Updated at: ${entry.updatedAt ? entry.updatedAt.toDate().toLocaleString() : "不
             my日記 <span className="ml-3 text-[10px] font-normal text-slate-500 bg-slate-200 dark:bg-zinc-800 px-2 py-0.5 rounded-full">v3.0</span>
           </h1>
           
-          <div className="flex items-center space-x-1 bg-white dark:bg-zinc-900 rounded-xl px-2 py-1 border border-slate-200 dark:border-zinc-800 shadow-sm">
+          <div className="flex items-center space-x-1 bg-white dark:bg-zinc-900 rounded-xl px-1 py-1 border border-slate-200 dark:border-zinc-800 shadow-sm">
             <button 
               onClick={() => setSelectedDate(subDays(selectedDate, 1))}
               className="p-1.5 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded-lg transition-colors text-slate-500"
             >
               <ChevronLeft size={18} />
             </button>
-            <div className="flex items-center space-x-2 px-3">
-              <span className="text-sm font-bold min-w-[120px] text-center">
-                {format(selectedDate, "yyyy年MM月dd日 (eee)", { locale: ja })}
-              </span>
-              {isToday && (
-                <span className="text-[10px] bg-orange-500 text-white px-1.5 py-0.5 rounded font-bold">今日</span>
-              )}
+            
+            <div className="relative flex items-center">
+              <input 
+                ref={dateInputRef}
+                type="date" 
+                className="absolute inset-0 opacity-0 w-0 h-0 pointer-events-none" 
+                onChange={handleDateSelect}
+                value={dateStr}
+              />
+              <button 
+                onClick={triggerDatePicker}
+                className="flex items-center space-x-2 px-3 py-1.5 hover:bg-slate-50 dark:hover:bg-zinc-800 rounded-lg transition-all group"
+              >
+                <CalendarDays size={16} className="text-orange-500 group-hover:scale-110 transition-transform" />
+                <span className="text-sm font-bold min-w-[120px] text-center text-slate-700 dark:text-slate-200">
+                  {format(selectedDate, "yyyy年MM月dd日 (eee)", { locale: ja })}
+                </span>
+                {isToday && (
+                  <span className="text-[10px] bg-orange-500 text-white px-1.5 py-0.5 rounded font-bold">今日</span>
+                )}
+              </button>
             </div>
+
             <button 
               onClick={() => setSelectedDate(addDays(selectedDate, 1))}
               className="p-1.5 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded-lg transition-colors text-slate-500"

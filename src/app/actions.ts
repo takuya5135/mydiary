@@ -99,44 +99,32 @@ export async function chatWithAIAction(
       }
     }
 
-    // AIに問い合わせ
-    let aiResult = await chatWithCompanion(
-      message,
-      history,
-      contextStrings.pastContext,
-      contextStrings.bucketListContext,
-      contextStrings.dictionaryContext,
-      contextStrings.profileContext,
-      calendarContext,
-      contextStrings.todaysDiaryContext,
-      persona
-    );
+    // AIに問い合わせ (履歴を管理しながらループ)
+    let currentHistory = [...history];
+    let currentMessage = message;
+    let aiResult;
+    let loopCount = 0;
 
-    // ツール呼び出しのハンドリング
-    if (aiResult.toolCall) {
+    while (loopCount < 3) {
+      aiResult = await chatWithCompanion(
+        currentMessage,
+        currentHistory,
+        contextStrings.pastContext,
+        contextStrings.bucketListContext,
+        contextStrings.dictionaryContext,
+        contextStrings.profileContext,
+        calendarContext,
+        contextStrings.todaysDiaryContext,
+        persona
+      );
+
+      // ツール呼び出しがなければ終了
+      if (!aiResult.toolCall) break;
+
       const { name, args } = aiResult.toolCall;
       
-      if (name === "search_past_diary") {
-        const queryVector = await generateEmbedding(args.query);
-        const searchResults = await searchDiaryEntries(userId, args.query, queryVector);
-        const searchSummary = searchResults.length > 0 
-          ? searchResults.map(r => `【${r.date}】 ${r.rawText.substring(0, 100)}...`).join("\n")
-          : "該当する記録は見つかりませんでした。";
-        
-        // 検索結果をコンテキストに含めて再度AIに回答させる
-        aiResult = await chatWithCompanion(
-          `以下の検索結果に基づいてユーザーに応答してください:\n${searchSummary}`,
-          history,
-          contextStrings.pastContext,
-          contextStrings.bucketListContext,
-          contextStrings.dictionaryContext,
-          contextStrings.profileContext,
-          calendarContext,
-          contextStrings.todaysDiaryContext,
-          persona
-        );
-      } else if (name === "jump_to_date") {
-        // ジャンプの場合は、ツール情報をそのままフロントエンドに返し、フロントエンド側で遷移させる
+      // ジャンプの場合は、ツール情報をそのままフロントエンドに返し、フロントエンド側で遷移させる
+      if (name === "jump_to_date") {
         return {
           success: true,
           reply: `${args.date}の日記を表示します。`,
@@ -144,7 +132,31 @@ export async function chatWithAIAction(
           toolCall: aiResult.toolCall
         };
       }
+
+      if (name === "search_past_diary") {
+        const queryVector = await generateEmbedding(args.query);
+        const searchResults = await searchDiaryEntries(userId, args.query, queryVector);
+        const searchSummary = searchResults.length > 0 
+          ? searchResults.map(r => `【${r.date}】 ${r.rawText.substring(0, 200)}`).join("\n---\n")
+          : "該当する記録は見つかりませんでした。";
+        
+        // 履歴を更新してAIに再答させる
+        // 1. ユーザーの元の質問を追加
+        // 2. AIの「データを取得します」という返答（モデルのターン）を追加
+        // 3. 検索結果（ツール出力のターン）を追加してループを回す
+        currentHistory = [
+          ...currentHistory,
+          { role: "user", content: currentMessage, createdAt: new Date() as any },
+          { role: "model", content: "データを取得します...", agentId: aiResult.agentId, createdAt: new Date() as any }
+        ];
+        currentMessage = `以下の検索結果に基づいて回答してください:\n${searchSummary}`;
+        loopCount++;
+      } else {
+        break; // 未知のツール
+      }
     }
+
+    if (!aiResult) throw new Error("AI response was empty");
 
     return { 
       success: true, 
