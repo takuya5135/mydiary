@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { MessageCircle, X, Send, Loader2, Shield, Zap, Sword, ClipboardList } from "lucide-react";
+import { MessageCircle, X, Send, Loader2, Shield, Zap, Sword, ClipboardList, Maximize2, Minimize2, Mic } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChatMessage, getRecentChatMessages, saveChatMessage } from "@/lib/firebase/chat";
 import { chatWithAIAction } from "@/app/actions";
@@ -38,8 +38,11 @@ export function ChatWindow({ userId, dateStr, onDateChange }: ChatWindowProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [activePersona, setActivePersona] = useState<PersonaId>("log");
+  const [isMaximized, setIsMaximized] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [size, setSize] = useState({ width: 384, height: 640 });
   const scrollRef = useRef<HTMLDivElement>(null);
+  const recognitionRef = useRef<any>(null);
 
   useEffect(() => {
     if (isOpen && messages.length === 0) {
@@ -55,16 +58,50 @@ export function ChatWindow({ userId, dateStr, onDateChange }: ChatWindowProps) {
 
   const loadMessages = async () => {
     setIsLoading(true);
-    const msgs = await getRecentChatMessages(userId, 30);
+    const msgs = await getRecentChatMessages(userId, 50);
     setMessages(msgs);
     setIsLoading(false);
+  };
+
+  // 音声認識の初期化
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (SpeechRecognition) {
+        recognitionRef.current = new SpeechRecognition();
+        recognitionRef.current.continuous = true;
+        recognitionRef.current.interimResults = true;
+        recognitionRef.current.lang = "ja-JP";
+
+        recognitionRef.current.onresult = (event: any) => {
+          let transcript = "";
+          for (let i = event.resultIndex; i < event.results.length; i++) {
+            transcript += event.results[i][0].transcript;
+          }
+          setInput(prev => prev + transcript);
+        };
+      }
+    }
+  }, []);
+
+  const handleMicStart = () => {
+    if (recognitionRef.current) {
+      setIsRecording(true);
+      recognitionRef.current.start();
+    }
+  };
+
+  const handleMicEnd = () => {
+    if (recognitionRef.current) {
+      setIsRecording(false);
+      recognitionRef.current.stop();
+    }
   };
 
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
 
     const userMessage = input.trim();
-    const currentPersona = activePersona;
     setInput("");
 
     const tempUserMsg: ChatMessage = {
@@ -73,12 +110,11 @@ export function ChatWindow({ userId, dateStr, onDateChange }: ChatWindowProps) {
       // @ts-ignore
       createdAt: { toDate: () => new Date() }
     };
-    const newHistory = [...messages, tempUserMsg];
-    setMessages(newHistory);
+    setMessages(prev => [...prev, tempUserMsg]);
     setIsLoading(true);
 
     try {
-      await saveChatMessage(userId, "user", userMessage, currentPersona);
+      await saveChatMessage(userId, "user", userMessage);
 
       const [bucketList, dictionary, profile, todaysEntry, recentEntries] = await Promise.all([
         getBucketList(userId),
@@ -122,7 +158,7 @@ export function ChatWindow({ userId, dateStr, onDateChange }: ChatWindowProps) {
       const result = await chatWithAIAction(
         userId,
         userMessage,
-        messages.filter(m => m.agentId === currentPersona), // このキャラのスレッド履歴のみ渡す
+        messages.slice(-10), // コンテキストとして直近のメッセージを渡す
         {
           bucketListContext,
           dictionaryContext,
@@ -131,32 +167,26 @@ export function ChatWindow({ userId, dateStr, onDateChange }: ChatWindowProps) {
           todaysDiaryContext,
         },
         googleToken || null,
-        dateStr,
-        currentPersona
+        dateStr
       );
 
-      if (result.success && result.reply) {
-        await saveChatMessage(userId, "model", result.reply, result.agentId);
-
-        const tempAiMsg: ChatMessage = {
-          role: "model",
-          agentId: result.agentId,
-          content: result.reply,
-          // @ts-ignore
-          createdAt: { toDate: () => new Date() }
-        };
-        
-        // ユーザー自身のメッセージも agentId 付きで履歴に反映
-        const finalUserMsg: ChatMessage = { ...tempUserMsg, agentId: currentPersona };
-        setMessages(prev => [...prev.filter(m => m !== tempUserMsg), finalUserMsg, tempAiMsg]);
+      if (result.success && result.replies) {
+        const addedMsgs: ChatMessage[] = [];
+        for (const reply of result.replies) {
+          await saveChatMessage(userId, "model", reply.content, reply.agentId);
+          addedMsgs.push({
+            ...reply,
+            // @ts-ignore
+            createdAt: { toDate: () => new Date() }
+          });
+          // 少し遅延をおいて表示させて「順番に話している感」を出す
+          setMessages(prev => [...prev, addedMsgs[addedMsgs.length - 1]]);
+          await new Promise(res => setTimeout(res, 800));
+        }
 
         // ツール呼び出し（日付ジャンプ）の処理
         if (result.toolCall?.name === "jump_to_date" && onDateChange) {
           onDateChange(result.toolCall.args.date);
-        }
-
-        if (result.calendarError) {
-          console.warn("Calendar token expired. User needs to re-login.");
         }
       } else {
         alert("エラーが発生しました: " + result.error);
@@ -167,6 +197,28 @@ export function ChatWindow({ userId, dateStr, onDateChange }: ChatWindowProps) {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleResize = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const startWidth = size.width;
+    const startHeight = size.height;
+
+    const onMouseMove = (moveEvent: MouseEvent) => {
+      const newWidth = Math.max(320, startWidth + (startX - moveEvent.clientX));
+      const newHeight = Math.max(400, startHeight + (startY - moveEvent.clientY));
+      setSize({ width: newWidth, height: newHeight });
+    };
+
+    const onMouseUp = () => {
+      document.removeEventListener("mousemove", onMouseMove);
+      document.removeEventListener("mouseup", onMouseUp);
+    };
+
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mouseup", onMouseUp);
   };
 
   return (
@@ -182,45 +234,77 @@ export function ChatWindow({ userId, dateStr, onDateChange }: ChatWindowProps) {
         {isOpen && (
           <motion.div
             initial={{ opacity: 0, y: 50, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
+            animate={{ 
+              opacity: 1, 
+              y: 0, 
+              scale: 1,
+              width: isMaximized ? "100%" : size.width,
+              height: isMaximized ? "100%" : size.height,
+              right: isMaximized ? 0 : 24,
+              bottom: isMaximized ? 0 : 24,
+              borderRadius: isMaximized ? 0 : 16
+            }}
             exit={{ opacity: 0, y: 50, scale: 0.95 }}
-            className="fixed bottom-6 right-6 w-full max-w-sm h-[640px] max-h-[85vh] bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 shadow-2xl rounded-2xl flex flex-col z-50 overflow-hidden"
+            className="fixed bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 shadow-2xl flex flex-col z-50 overflow-hidden"
+            style={{ maxWidth: isMaximized ? "100%" : "95vw", maxHeight: isMaximized ? "100%" : "90vh" }}
           >
-            <div className="bg-slate-50 dark:bg-zinc-950 border-b border-slate-200 dark:border-zinc-800">
-              <div className="flex justify-between items-center px-4 pt-3 pb-1">
+            {/* Resize handles (only when not maximized) */}
+            {!isMaximized && (
+              <>
+                <div 
+                  onMouseDown={handleResize}
+                  className="absolute top-0 left-0 w-4 h-full cursor-ew-resize z-10" 
+                />
+                <div 
+                  onMouseDown={handleResize}
+                  className="absolute top-0 left-0 w-full h-4 cursor-ns-resize z-10" 
+                />
+                <div 
+                  onMouseDown={handleResize}
+                  className="absolute top-0 left-0 w-6 h-6 cursor-nw-resize z-10" 
+                />
+              </>
+            )}
+
+            <div className="bg-slate-50 dark:bg-zinc-950 border-b border-slate-200 dark:border-zinc-800 shrink-0">
+              <div className="flex justify-between items-center px-4 pt-3 pb-2">
                 <div className="flex items-center space-x-2">
                   <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-lg">
                     <ClipboardList size={16} />
                   </div>
                   <div>
                     <h3 className="text-sm font-bold text-slate-800 dark:text-white leading-tight">ChampionMaker</h3>
-                    <p className="text-[10px] text-slate-500">外部脳 チーム連携中</p>
+                    <p className="text-[10px] text-slate-500">軍師会議：外部脳チーム連携中</p>
                   </div>
                 </div>
-                <button 
-                  onClick={() => setIsOpen(false)}
-                  className="p-1.5 rounded-full hover:bg-slate-200 dark:hover:bg-zinc-800 text-slate-400"
-                >
-                  <X size={20} />
-                </button>
+                <div className="flex items-center space-x-1">
+                  <button 
+                    onClick={() => setIsMaximized(!isMaximized)}
+                    className="p-1.5 rounded-full hover:bg-slate-200 dark:hover:bg-zinc-800 text-slate-400"
+                    title={isMaximized ? "縮小" : "最大化"}
+                  >
+                    {isMaximized ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
+                  </button>
+                  <button 
+                    onClick={() => setIsOpen(false)}
+                    className="p-1.5 rounded-full hover:bg-slate-200 dark:hover:bg-zinc-800 text-slate-400"
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
               </div>
 
-              <div className="flex px-2 pb-2 space-x-1">
+              <div className="flex px-3 pb-2 space-x-2 overflow-x-auto">
                 {PERSONAS.map((p) => (
-                  <button
+                  <div
                     key={p.id}
-                    onClick={() => setActivePersona(p.id)}
-                    className={`flex-1 flex flex-col items-center py-1.5 rounded-lg transition-all ${
-                      activePersona === p.id 
-                        ? "bg-white dark:bg-zinc-800 shadow-sm border border-slate-200 dark:border-zinc-700" 
-                        : "opacity-40 grayscale hover:opacity-100 hover:grayscale-0"
-                    }`}
+                    className="flex items-center space-x-1.5 px-2 py-1 bg-white dark:bg-zinc-800 rounded-full border border-slate-200 dark:border-zinc-700 shadow-sm shrink-0"
                   >
-                    <div className={`w-6 h-6 rounded-full ${p.color} flex items-center justify-center text-white mb-0.5`}>
+                    <div className={`w-4 h-4 rounded-full ${p.color} flex items-center justify-center text-white`}>
                       {p.icon}
                     </div>
                     <span className="text-[9px] font-bold text-slate-600 dark:text-slate-400">{p.name}</span>
-                  </button>
+                  </div>
                 ))}
               </div>
             </div>
@@ -236,30 +320,32 @@ export function ChatWindow({ userId, dateStr, onDateChange }: ChatWindowProps) {
                   </p>
                 </div>
               )}
-              {messages.filter(msg => {
-                // キャラクターごとのスレッド分離
-                return msg.agentId === activePersona;
-              }).map((msg, i) => {
+              {messages.map((msg, i) => {
                 const isUser = msg.role === "user";
                 const persona = PERSONAS.find(p => p.id === (msg.agentId || "log"));
                 
                 return (
-                  <div key={i} className={`flex ${isUser ? "justify-end" : "justify-start"} items-end space-x-2 animate-in fade-in slide-in-from-bottom-2 duration-300`}>
+                  <div key={i} className={`flex ${isUser ? "justify-end" : "justify-start"} items-start space-x-2 animate-in fade-in slide-in-from-bottom-2 duration-300`}>
                     {!isUser && (
-                      <div className={`w-7 h-7 rounded-full ${persona?.color || "bg-slate-600"} flex items-center justify-center text-white text-[10px] shadow-sm mb-1 flex-shrink-0`}>
+                      <div className={`w-8 h-8 rounded-full ${persona?.color || "bg-slate-600"} flex items-center justify-center text-white text-[11px] shadow-md mt-1 flex-shrink-0 border-2 border-white dark:border-zinc-800`}>
                         {persona?.icon}
                       </div>
                     )}
                     <div 
-                      className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-[13px] leading-relaxed whitespace-pre-wrap shadow-sm ${
+                      className={`max-w-[85%] rounded-2xl px-4 py-3 text-[13.5px] leading-relaxed whitespace-pre-wrap shadow-md ${
                         isUser 
-                          ? "bg-blue-600 text-white rounded-br-sm" 
-                          : "bg-white dark:bg-zinc-800 text-slate-700 dark:text-slate-300 border border-slate-100 dark:border-zinc-700 rounded-bl-sm"
+                          ? "bg-blue-600 text-white rounded-tr-none" 
+                          : "bg-white dark:bg-zinc-800 text-slate-700 dark:text-slate-200 border border-slate-100 dark:border-zinc-700 rounded-tl-none font-medium"
                       }`}
                     >
                       {!isUser && (
-                        <div className="text-[9px] font-bold mb-1 opacity-50 uppercase tracking-wider">
-                          {persona?.name || "LOG"} ({persona?.role || "秘書"})
+                        <div className="flex items-center space-x-2 mb-1.5">
+                          <span className={`text-[10px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded ${persona?.color} text-white`}>
+                            {persona?.name}
+                          </span>
+                          <span className="text-[10px] text-slate-400 font-bold">
+                            {persona?.role}
+                          </span>
                         </div>
                       )}
                       {msg.content}
@@ -268,19 +354,32 @@ export function ChatWindow({ userId, dateStr, onDateChange }: ChatWindowProps) {
                 );
               })}
               {isLoading && (
-                <div className="flex justify-start items-end space-x-2">
-                  <div className={`w-7 h-7 rounded-full ${PERSONAS.find(p => p.id === activePersona)?.color} flex items-center justify-center text-white mb-1 animate-pulse`}>
-                    {PERSONAS.find(p => p.id === activePersona)?.icon}
+                <div className="flex justify-start items-start space-x-2">
+                  <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-zinc-800 flex items-center justify-center text-slate-400 animate-pulse mt-1">
+                    <Loader2 size={16} className="animate-spin" />
                   </div>
-                  <div className="bg-white dark:bg-zinc-800 border border-slate-100 dark:border-zinc-700 rounded-2xl rounded-bl-sm px-4 py-2.5 shadow-sm">
-                    <Loader2 size={16} className="animate-spin text-blue-500" />
+                  <div className="bg-white dark:bg-zinc-800 border border-slate-100 dark:border-zinc-700 rounded-2xl rounded-tl-none px-5 py-3 shadow-md italic text-slate-400 text-sm">
+                    軍師が協議中...
                   </div>
                 </div>
               )}
             </div>
 
-            <div className="p-3 bg-white dark:bg-zinc-950 border-t border-slate-200 dark:border-zinc-800">
-              <div className="flex items-end space-x-2">
+            <div className="p-4 bg-white dark:bg-zinc-950 border-t border-slate-200 dark:border-zinc-800 shrink-0">
+              <div className="flex items-end space-x-2 relative">
+                <button
+                  onMouseDown={handleMicStart}
+                  onMouseUp={handleMicEnd}
+                  onMouseLeave={handleMicEnd}
+                  className={`p-3 rounded-xl transition-all shadow-md ${
+                    isRecording 
+                      ? "bg-red-500 text-white scale-110 animate-pulse ring-4 ring-red-500/20" 
+                      : "bg-slate-100 dark:bg-zinc-800 text-slate-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30"
+                  }`}
+                  title="音声入力（押している間）"
+                >
+                  <Mic size={20} />
+                </button>
                 <textarea
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
@@ -290,18 +389,23 @@ export function ChatWindow({ userId, dateStr, onDateChange }: ChatWindowProps) {
                       handleSend();
                     }
                   }}
-                  placeholder={`${PERSONAS.find(p => p.id === activePersona)?.name}にメッセージ...`}
-                  className="flex-1 bg-slate-100 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl px-3 py-2.5 text-[13px] text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50 resize-none max-h-32 min-h-[44px]"
+                  placeholder="会議に発言する..."
+                  className="flex-1 bg-slate-100 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl px-4 py-3 text-[14px] text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50 resize-none max-h-48 min-h-[48px]"
                   rows={1}
                 />
                 <button
                   onClick={handleSend}
                   disabled={!input.trim() || isLoading}
-                  className="p-3 rounded-xl bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:bg-slate-300 dark:disabled:bg-zinc-800 transition-all shadow-lg active:scale-95"
+                  className="p-3.5 rounded-xl bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:bg-slate-300 dark:disabled:bg-zinc-800 transition-all shadow-lg active:scale-95"
                 >
-                  <Send size={18} />
+                  <Send size={20} />
                 </button>
               </div>
+              {isRecording && (
+                <div className="absolute bottom-20 left-1/2 -translate-x-1/2 bg-red-500 text-white text-[10px] font-black px-3 py-1 rounded-full shadow-xl animate-bounce">
+                  RECORDING...
+                </div>
+              )}
             </div>
           </motion.div>
         )}

@@ -102,68 +102,80 @@ export async function chatWithAIAction(
       }
     }
 
-    // AIに問い合わせ (履歴を管理しながらループ)
+    // AI軍師たちの順次回答 (MAMO -> WAKU -> LOG -> ZEN)
+    const personas: ("mamo" | "waku" | "log" | "zen")[] = ["mamo", "waku", "log", "zen"];
     let currentHistory = [...history];
-    let currentMessage = message;
-    let aiResult;
-    let loopCount = 0;
+    const replies: ChatMessage[] = [];
 
-    while (loopCount < 3) {
-      aiResult = await chatWithCompanion(
-        currentMessage,
-        currentHistory,
-        contextStrings.pastContext,
-        contextStrings.bucketListContext,
-        contextStrings.dictionaryContext,
-        contextStrings.profileContext,
-        calendarContext,
-        contextStrings.todaysDiaryContext,
-        persona
-      );
+    // ユーザーのメッセージを履歴に追加（一時的）
+    const userMsg: ChatMessage = { role: "user", content: message, createdAt: new Date() as any };
 
-      // ツール呼び出しがなければ終了
-      if (!aiResult.toolCall) break;
+    for (const p of personas) {
+      let aiResult;
+      let loopCount = 0;
+      let personaMessage = message;
 
-      const { name, args } = aiResult.toolCall;
-      
-      // ジャンプの場合は、ツール情報をそのままフロントエンドに返し、フロントエンド側で遷移させる
-      if (name === "jump_to_date") {
-        return {
-          success: true,
-          reply: `${args.date}の日記を表示します。`,
-          agentId: aiResult.agentId,
-          toolCall: aiResult.toolCall
-        };
+      // 各ペルソナがツール（検索など）を使う可能性を考慮してループ
+      while (loopCount < 3) {
+        aiResult = await chatWithCompanion(
+          personaMessage,
+          [...currentHistory, userMsg],
+          contextStrings.pastContext,
+          contextStrings.bucketListContext,
+          contextStrings.dictionaryContext,
+          contextStrings.profileContext,
+          calendarContext,
+          contextStrings.todaysDiaryContext,
+          p
+        );
+
+        if (!aiResult.toolCall) break;
+
+        const { name, args } = aiResult.toolCall;
+        
+        if (name === "jump_to_date") {
+          // ジャンプの場合はその時点で終了し、フロントへ返す
+          return {
+            success: true,
+            replies: [
+              ...replies,
+              { role: "model", content: `${args.date}の日記を表示します。`, agentId: aiResult.agentId, createdAt: new Date() as any }
+            ],
+            toolCall: aiResult.toolCall
+          };
+        }
+
+        if (name === "search_past_diary") {
+          const queryVector = await generateEmbedding(args.query);
+          const searchResults = await searchDiaryEntries(userId, args.query, queryVector);
+          const searchSummary = searchResults.length > 0 
+            ? searchResults.map(r => `【${r.date}】 ${r.rawText.substring(0, 200)}`).join("\n---\n")
+            : "該当する記録は見つかりませんでした。";
+          
+          personaMessage = `以下の検索結果に基づいて回答してください:\n${searchSummary}`;
+          loopCount++;
+        } else {
+          break;
+        }
       }
 
-      if (name === "search_past_diary") {
-        const queryVector = await generateEmbedding(args.query);
-        const searchResults = await searchDiaryEntries(userId, args.query, queryVector);
-        const searchSummary = searchResults.length > 0 
-          ? searchResults.map(r => `【${r.date}】 ${r.rawText.substring(0, 200)}`).join("\n---\n")
-          : "該当する記録は見つかりませんでした。";
-        
-        // 履歴を更新してAIに再答させる
-        currentHistory = [
-          ...currentHistory,
-          { role: "user", content: currentMessage, createdAt: new Date() as any },
-          { role: "model", content: "データを取得します...", agentId: aiResult.agentId, createdAt: new Date() as any }
-        ];
-        currentMessage = `以下の検索結果に基づいて回答してください:\n${searchSummary}`;
-        loopCount++;
-      } else {
-        break; // 未知のツール
+      if (aiResult) {
+        const aiMsg: ChatMessage = { 
+          role: "model", 
+          content: aiResult.reply, 
+          agentId: aiResult.agentId, 
+          createdAt: new Date() as any 
+        };
+        replies.push(aiMsg);
+        // 次のペルソナがこの発言を読めるように履歴に追加
+        currentHistory = [...currentHistory, aiMsg];
       }
     }
 
-    if (!aiResult) throw new Error("AI response was empty");
-
     return { 
       success: true, 
-      reply: aiResult.reply, 
-      agentId: aiResult.agentId,
-      calendarError,
-      toolCall: aiResult.toolCall
+      replies, 
+      calendarError
     };
   } catch (error: any) {
     console.error("chatWithAIAction failed:", error);
