@@ -3,8 +3,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import { MessageCircle, X, Send, Loader2, Shield, Zap, Sword, ClipboardList, Maximize2, Minimize2, Mic, Trash2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChatMessage, getRecentChatMessages, saveChatMessage } from "@/lib/firebase/chat";
-import { chatWithAIAction, clearChatAction } from "@/app/actions";
+import { ChatMessage, getRecentChatMessages, saveChatMessage, deleteChatHistory } from "@/lib/firebase/chat";
+import { chatWithAIAction } from "@/app/actions";
 import { getBucketList } from "@/lib/firebase/bucketList";
 import { getDictionary } from "@/lib/firebase/dictionary";
 import { getUserProfile } from "@/lib/firebase/profile";
@@ -103,12 +103,8 @@ export function ChatWindow({ userId, dateStr, onDateChange }: ChatWindowProps) {
     
     setIsLoading(true);
     try {
-      const result = await clearChatAction(userId);
-      if (result.success) {
-        setMessages([]);
-      } else {
-        alert("クリアに失敗しました: " + result.error);
-      }
+      await deleteChatHistory(userId);
+      setMessages([]);
     } catch (error: any) {
       alert("エラーが発生しました: " + (error.message || "詳細不明"));
     } finally {
