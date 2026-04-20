@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Send, Mic, Sparkles, Loader2, Save } from "lucide-react";
 import { DiaryEntry, getDiaryEntry, saveDiaryEntry, getRecentEntries } from "@/lib/firebase/entries";
 import { getBucketList } from "@/lib/firebase/bucketList";
@@ -23,6 +23,8 @@ export function DiaryInput({ userId, date, onSave, onOrganizeTrigger }: DiaryInp
   const [isOrganizing, setIsOrganizing] = useState(false);
   const [suggestions, setSuggestions] = useState<DictionarySuggestion[]>([]);
   const [registeredIds, setRegisteredIds] = useState<Set<string>>(new Set());
+  const [isRecording, setIsRecording] = useState(false);
+  const recognitionRef = useRef<any>(null);
 
   useEffect(() => {
     const fetchEntry = async () => {
@@ -35,6 +37,59 @@ export function DiaryInput({ userId, date, onSave, onOrganizeTrigger }: DiaryInp
     };
     fetchEntry();
   }, [userId, date]);
+
+  // 音声認識の初期化
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (SpeechRecognition) {
+        recognitionRef.current = new SpeechRecognition();
+        recognitionRef.current.continuous = true;
+        recognitionRef.current.interimResults = false; // 確定した結果のみを取得
+        recognitionRef.current.lang = "ja-JP";
+
+        recognitionRef.current.onresult = (event: any) => {
+          let transcript = "";
+          for (let i = event.resultIndex; i < event.results.length; i++) {
+            if (event.results[i].isFinal) {
+              transcript += event.results[i][0].transcript;
+            }
+          }
+          if (transcript) {
+            setText(prev => {
+              const currentText = prev.trim();
+              const separator = currentText ? "\n" : "";
+              return currentText + separator + transcript;
+            });
+          }
+        };
+
+        recognitionRef.current.onerror = (event: any) => {
+          console.error("Speech recognition error:", event.error);
+          setIsRecording(false);
+        };
+      }
+    }
+  }, []);
+
+  const handleMicStart = () => {
+    if (recognitionRef.current && !isRecording) {
+      setIsRecording(true);
+      try {
+        recognitionRef.current.start();
+      } catch (err) {
+        console.error("Failed to start recognition:", err);
+        setIsRecording(false);
+      }
+    }
+  };
+
+  const handleMicEnd = () => {
+    if (recognitionRef.current && isRecording) {
+      setIsRecording(false);
+      recognitionRef.current.stop();
+    }
+  };
 
   const handleManualSave = async () => {
     setIsSaving(true);
@@ -169,9 +224,21 @@ export function DiaryInput({ userId, date, onSave, onOrganizeTrigger }: DiaryInp
       />
 
       <div className="flex justify-between items-center pt-2">
-        <button className="flex items-center space-x-2 px-3 py-2 rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-slate-400 text-xs font-semibold hover:bg-slate-200 dark:hover:bg-zinc-700 transition-colors">
-          <Mic size={16} />
-          <span>音声で入力</span>
+        <button 
+          onMouseDown={handleMicStart}
+          onMouseUp={handleMicEnd}
+          onMouseLeave={handleMicEnd}
+          onTouchStart={(e) => { e.preventDefault(); handleMicStart(); }}
+          onTouchEnd={(e) => { e.preventDefault(); handleMicEnd(); }}
+          className={`flex items-center space-x-2 px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
+            isRecording 
+              ? "bg-red-500 text-white scale-105 animate-pulse ring-4 ring-red-500/20 shadow-lg shadow-red-500/20" 
+              : "bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-zinc-700"
+          }`}
+          title="音声で入力（押している間は録音）"
+        >
+          <Mic size={16} className={isRecording ? "animate-bounce" : ""} />
+          <span>{isRecording ? "録音中..." : "音声で入力"}</span>
         </button>
 
         <button 
