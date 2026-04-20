@@ -56,6 +56,9 @@ export async function organizeDiaryAction(
     return { success: true, data: result, embedding };
   } catch (error: any) {
     console.error("organizeDiaryAction failed:", error);
+    if (error.message?.includes("GOOGLE_API_ERROR: 401") || error.message?.includes("GOOGLE_API_ERROR: 403")) {
+      return { success: false, error: "Googleの認証が切れています。右上のGoogleアイコンから再ログインしてください。" };
+    }
     return { success: false, error: error.message };
   }
 }
@@ -95,8 +98,8 @@ export async function chatWithAIAction(
           calendarContext = combined.join("\n");
         }
       } catch (e: any) {
-        if (e.message === "GOOGLE_CALENDAR_UNAUTHORIZED") {
-          calendarContext = "【重要】Google関連の認証が切れています。ユーザーに再ログインを促してください。";
+        if (e.message?.includes("GOOGLE_API_ERROR: 401") || e.message?.includes("GOOGLE_API_ERROR: 403")) {
+          calendarContext = "【重要】Google関連の認証が切れています。ユーザーに画面右上のGoogleアイコンから再ログインするよう促してください。";
           calendarError = true;
         }
       }

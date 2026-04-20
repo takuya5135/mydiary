@@ -183,6 +183,7 @@ export function ProfileModal({ userId, isOpen, onClose }: ProfileModalProps) {
                         </div>
                       </div>
                     ))}
+                  </div>
                 </div>
 
                 {/* 現在の仕事内容 */}
