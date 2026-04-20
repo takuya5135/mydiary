@@ -19,7 +19,7 @@ export async function backupToDriveAction(
 import { organizeDiary, chatWithCompanion } from "@/lib/ai/huddle";
 import { fetchDailyCalendarEvents } from "@/lib/google/calendar";
 import { fetchDailyTasks } from "@/lib/google/tasks";
-import { ChatMessage, saveChatMessage } from "@/lib/firebase/chat";
+import { ChatMessage, saveChatMessage, deleteChatHistory } from "@/lib/firebase/chat";
 import { searchDiaryEntries } from "@/lib/firebase/entries";
 import { generateEmbedding } from "@/lib/ai/gemini";
 import { getDictionary } from "@/lib/firebase/dictionary";
@@ -240,6 +240,16 @@ export async function getDictionaryAction(userId: string) {
     return { success: true, dictionary };
   } catch (error: any) {
     console.error("getDictionaryAction error:", error);
+    return { success: false, error: error.message };
+  }
+}
+
+export async function clearChatAction(userId: string) {
+  try {
+    await deleteChatHistory(userId);
+    return { success: true };
+  } catch (error: any) {
+    console.error("clearChatAction failed:", error);
     return { success: false, error: error.message };
   }
 }

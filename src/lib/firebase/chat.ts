@@ -6,6 +6,8 @@ import {
   orderBy, 
   limit, 
   getDocs,
+  deleteDoc,
+  writeBatch,
   Timestamp 
 } from "firebase/firestore";
 import { db as serverDb } from "./config";
@@ -65,5 +67,24 @@ export const getRecentChatMessages = async (userId: string, count: number = 30):
       stack: error.stack
     });
     return [];
+  }
+};
+
+export const deleteChatHistory = async (userId: string) => {
+  try {
+    const messagesRef = collection(serverDb, "chats", userId, "messages");
+    const qs = await getDocs(messagesRef);
+    
+    if (qs.empty) return;
+
+    const batch = writeBatch(serverDb);
+    qs.docs.forEach((doc) => {
+      batch.delete(doc.ref);
+    });
+    
+    await batch.commit();
+  } catch (error: any) {
+    console.error("deleteChatHistory error:", error);
+    throw error;
   }
 };
