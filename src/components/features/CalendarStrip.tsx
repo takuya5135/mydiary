@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Calendar as CalendarIcon, Clock, AlertCircle, CheckCircle2, ListTodo } from "lucide-react";
 import { CalendarEvent } from "@/lib/google/calendar";
 import { GoogleTask } from "@/lib/google/tasks";
+import { getGoogleCalendarAndTasksAction } from "@/app/actions";
 import { loginWithGoogle } from "@/lib/firebase/auth";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
