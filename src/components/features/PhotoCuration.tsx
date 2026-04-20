@@ -89,19 +89,30 @@ export function PhotoCuration({ userId, date, selectedPhotoIds = [], onUpdate }:
               key={idx}
               className="relative aspect-square rounded-lg overflow-hidden group shadow-sm bg-slate-200 dark:bg-zinc-800"
             >
-              {/* @next/next/no-img-element を無効化して利用 */}
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={url}
-                alt="追加された写真"
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).src = "https://via.placeholder.com/300?text=Error";
-                }}
-              />
+              <a 
+                href={url} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="block w-full h-full"
+                title="元画像を表示"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={url}
+                  alt="追加された写真"
+                  className="w-full h-full object-cover hover:opacity-90 transition-opacity"
+                  referrerPolicy="no-referrer"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = "https://via.placeholder.com/300?text=Load+Error";
+                  }}
+                />
+                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                  <Link size={20} className="text-white drop-shadow-md" />
+                </div>
+              </a>
               <button
                 onClick={() => handleRemovePhoto(url)}
-                className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-red-500 transition-all"
+                className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-red-500 transition-all z-10"
               >
                 <Trash2 size={12} />
               </button>
