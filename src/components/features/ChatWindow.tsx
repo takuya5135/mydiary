@@ -144,7 +144,7 @@ export function ChatWindow({ userId, dateStr, onDateChange }: ChatWindowProps) {
       let profileContext = "未登録";
       if (profile) {
         const historyStr = profile.history?.map(h => `${h.from}~${h.to}:${h.description}`).join(", ") || "";
-        profileContext = `持病:${profile.medicalHistory || "なし"}, 経歴:${historyStr}`;
+        profileContext = `持病:${profile.medicalHistory || "なし"}, 家族構成:${profile.familyStructure || "未設定"}, 仕事内容:${profile.jobDescription || "未設定"}, 趣味・交流:${profile.hobbies || "未設定"}, 経歴:${historyStr}`;
       }
 
       let todaysDiaryContext = "未入力";

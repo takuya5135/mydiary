@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { UserCircle, X, Save, ShieldAlert, Building2, Loader2, Plus, Trash2 } from "lucide-react";
+import { UserCircle, X, Save, ShieldAlert, Building2, Loader2, Plus, Trash2, Briefcase, Users, Heart } from "lucide-react";
 import { getUserProfile, saveUserProfile, UserProfile, JobHistory } from "@/lib/firebase/profile";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -183,6 +183,53 @@ export function ProfileModal({ userId, isOpen, onClose }: ProfileModalProps) {
                         </div>
                       </div>
                     ))}
+                </div>
+
+                {/* 現在の仕事内容 */}
+                <div className="space-y-4 p-5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
+                  <h3 className="text-sm font-bold text-slate-700 dark:text-slate-200 flex items-center">
+                    <Briefcase size={16} className="mr-2 text-slate-400" />現在の仕事内容
+                  </h3>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">業務の詳細・役割・責任範囲</label>
+                    <textarea 
+                      value={profile.jobDescription || ""}
+                      onChange={e => setProfile({ ...profile, jobDescription: e.target.value })}
+                      className="w-full h-24 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 text-sm placeholder:text-slate-400 resize-none"
+                      placeholder="例: IT企業のプロジェクトマネージャーとして、チームの進捗管理や顧客調整を担当している。多忙な時期は残業が増えやすい。"
+                    />
+                  </div>
+                </div>
+
+                {/* 家族構成 */}
+                <div className="space-y-4 p-5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
+                  <h3 className="text-sm font-bold text-slate-700 dark:text-slate-200 flex items-center">
+                    <Users size={16} className="mr-2 text-slate-400" />家族構成
+                  </h3>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">家族・同居人・特記事項</label>
+                    <textarea 
+                      value={profile.familyStructure || ""}
+                      onChange={e => setProfile({ ...profile, familyStructure: e.target.value })}
+                      className="w-full h-24 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 text-sm placeholder:text-slate-400 resize-none"
+                      placeholder="例: 妻(35歳)と娘(5歳)の3人暮らし。妻はフルタイム勤務、娘は保育園。※家族との時間を確保するためのアドバイスに活用されます。"
+                    />
+                  </div>
+                </div>
+
+                {/* 趣味・ライフワーク */}
+                <div className="space-y-4 p-5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
+                  <h3 className="text-sm font-bold text-slate-700 dark:text-slate-200 flex items-center">
+                    <Heart size={16} className="mr-2 text-slate-400" />趣味・コミュニティ
+                  </h3>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">趣味・交流・休日の過ごし方</label>
+                    <textarea 
+                      value={profile.hobbies || ""}
+                      onChange={e => setProfile({ ...profile, hobbies: e.target.value })}
+                      className="w-full h-24 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 text-sm placeholder:text-slate-400 resize-none"
+                      placeholder="例: 週末はキャンプに行くことが多い。地元のランニングサークルに所属している。※モチベーション向上のヒントとして活用されます。"
+                    />
                   </div>
                 </div>
 

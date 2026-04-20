@@ -196,7 +196,7 @@ ${personaInstructions.zen}`}
 ### 【重要】外部脳データベース:
 1. **今日の予定:** ${calendarContext || "なし"}
 2. **今日の日記:** ${todaysDiaryContext || "なし"}
-3. **ユーザープロファイル（持病・経歴）:** ${profileContext || "未登録"}
+3. **ユーザープロファイル（家族・仕事・趣味・持病等）:** ${profileContext || "未登録"}
 4. **バケットリスト（やりたいこと）:** ${bucketListContext || "未登録"}
 5. **固有名詞辞書（絶対的真実）:** ${dictionaryContext || "未登録"}
    ※名称や定義については、この辞書にある情報を最優先してください。

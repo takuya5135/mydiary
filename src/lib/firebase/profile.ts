@@ -13,8 +13,10 @@ export interface UserProfile {
   birthDate?: string;
   origin?: string;
   history?: JobHistory[];
+  jobDescription?: string; // 現在の仕事の内容
   medicalHistory?: string; // 持病・アレルギーなど
-  familyStructure?: string;
+  familyStructure?: string; // 家族構成
+  hobbies?: string; // 趣味・コミュニティ
   memo?: string;
 }
 
