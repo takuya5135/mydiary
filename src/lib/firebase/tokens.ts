@@ -3,12 +3,16 @@ import { db } from "./config";
 
 const COLLECTION_NAME = "users";
 
-export const saveUserToken = async (userId: string, accessToken: string) => {
+export const saveUserToken = async (userId: string, accessToken: string, email?: string | null) => {
   const userRef = doc(db, COLLECTION_NAME, userId);
-  const data = {
+  const data: any = {
     googleAccessToken: accessToken,
     tokenUpdatedAt: Timestamp.now()
   };
+
+  if (email) {
+    data.email = email.toLowerCase();
+  }
   
   try {
     const userDoc = await getDoc(userRef);

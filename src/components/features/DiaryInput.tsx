@@ -131,7 +131,7 @@ export function DiaryInput({ userId, date, onSave, onOrganizeTrigger }: DiaryInp
       const googleToken = await getUserToken(userId);
 
       // 3. Server ActionでGemini API呼び出し
-      const result = await organizeDiaryAction(text, {
+      const result = await organizeDiaryAction(userId, text, {
         dictionaryContext,
       }, googleToken || null, date);
 

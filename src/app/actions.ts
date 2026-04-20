@@ -23,10 +23,42 @@ import { ChatMessage, saveChatMessage } from "@/lib/firebase/chat";
 import { searchDiaryEntries } from "@/lib/firebase/entries";
 import { generateEmbedding } from "@/lib/ai/gemini";
 import { getDictionary } from "@/lib/firebase/dictionary";
-import { collection, query, where, getDocs } from "firebase/firestore";
+import { collection, query, where, getDocs, doc, getDoc } from "firebase/firestore";
 import { db as serverDb } from "@/lib/firebase/config";
 
+/**
+ * サーバーサイドでのホワイトリストチェック
+ */
+async function verifyWhitelist(userId: string) {
+  try {
+    const userRef = doc(serverDb, "users", userId);
+    const userSnap = await getDoc(userRef);
+    
+    if (!userSnap.exists()) {
+      throw new Error("User record not found. Please log in again.");
+    }
+    
+    const email = userSnap.data()?.email;
+    if (!email) {
+      throw new Error("User email not found. Please log in again.");
+    }
+    
+    const whitelistRef = doc(serverDb, "whitelisted_users", email.toLowerCase());
+    const whitelistSnap = await getDoc(whitelistRef);
+    
+    if (!whitelistSnap.exists()) {
+      throw new Error("Access Denied: You are not authorized to use AI features.");
+    }
+    
+    return true;
+  } catch (error: any) {
+    console.error("Whitelist verification failed:", error);
+    throw new Error(error.message || "Unauthorized");
+  }
+}
+
 export async function organizeDiaryAction(
+  userId: string,
   rawText: string,
   contextStrings: {
     dictionaryContext: string;
@@ -35,6 +67,9 @@ export async function organizeDiaryAction(
   dateStr: string
 ) {
   try {
+    // 権限チェック
+    await verifyWhitelist(userId);
+
     let calendarContext = "なし";
     if (googleToken) {
       const [events, tasks] = await Promise.all([
@@ -79,6 +114,9 @@ export async function chatWithAIAction(
   persona?: "log" | "mamo" | "waku" | "zen"
 ) {
   try {
+    // 権限チェック
+    await verifyWhitelist(userId);
+
     // カレンダーの予定とタスクを取得
     let calendarContext = "予定・タスクなし";
     let calendarError = false;
