@@ -14,7 +14,9 @@ export async function fetchDailyTasks(token: string, dateStr: string): Promise<G
 
     if (!listsRes.ok) {
       if (listsRes.status === 401 || listsRes.status === 403) {
-        throw new Error(`GOOGLE_API_ERROR: ${listsRes.status}`);
+        const errorData = await listsRes.json().catch(() => ({}));
+        const googleMessage = errorData.error?.message || "";
+        throw new Error(`GOOGLE_API_ERROR: ${listsRes.status} [Tasks] ${googleMessage}`);
       }
       return [];
     }
@@ -30,7 +32,9 @@ export async function fetchDailyTasks(token: string, dateStr: string): Promise<G
       });
 
       if (tasksRes.status === 401 || tasksRes.status === 403) {
-        throw new Error(`GOOGLE_API_ERROR: ${tasksRes.status}`);
+        const errorData = await tasksRes.json().catch(() => ({}));
+        const googleMessage = errorData.error?.message || "";
+        throw new Error(`GOOGLE_API_ERROR: ${tasksRes.status} [Tasks] ${googleMessage}`);
       }
 
       if (tasksRes.ok) {

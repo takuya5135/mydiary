@@ -17,7 +17,8 @@ async function fetchCalendarList(token: string): Promise<string[]> {
     if (!res.ok) return ["primary"];
     const data = await res.json();
     return data.items.map((item: any) => item.id);
-  } catch (err) {
+  } catch (err: any) {
+    if (err.message?.includes("GOOGLE_API_ERROR")) throw err;
     return ["primary"];
   }
 }
@@ -43,7 +44,8 @@ export async function fetchDailyCalendarEvents(token: string, dateStr: string): 
 
       if (res.status === 401 || res.status === 403) {
         const errorData = await res.json().catch(() => ({}));
-        throw new Error(`GOOGLE_API_ERROR: ${res.status} ${errorData.error?.message || ""}`);
+        const googleMessage = errorData.error?.message || "";
+        throw new Error(`GOOGLE_API_ERROR: ${res.status} [Calendar] ${googleMessage}`);
       }
 
       if (res.ok) {

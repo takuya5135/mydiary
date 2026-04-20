@@ -2,9 +2,10 @@ import React, { useState, useEffect } from "react";
 import { Calendar as CalendarIcon, Clock, AlertCircle, CheckCircle2, ListTodo } from "lucide-react";
 import { CalendarEvent } from "@/lib/google/calendar";
 import { GoogleTask } from "@/lib/google/tasks";
-import { getGoogleCalendarAndTasksAction } from "@/app/actions";
+import { loginWithGoogle } from "@/lib/firebase/auth";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
+import { RefreshCw } from "lucide-react";
 
 interface CalendarStripProps {
   userId: string;
@@ -40,9 +41,11 @@ export function CalendarStrip({ userId, date }: CalendarStripProps) {
           setTasks(result.tasks || []);
         } else {
           if (result.isAuthError) {
-            setError("Google APIの権限エラーです。APIの有効化を確認するか、再ログインしてください。");
+            // GOOGLE_API_ERROR: 403 [Tasks] ... などの形式になっている
+            const cleanMessage = (result.error || "").replace("GOOGLE_API_ERROR: ", "");
+            setError(`Google API権限エラー: ${cleanMessage}`);
           } else {
-            setError("データの読み込みに失敗しました。");
+            setError(result.error || "データの読み込みに失敗しました。");
           }
         }
       } catch (err: any) {
@@ -66,11 +69,37 @@ export function CalendarStrip({ userId, date }: CalendarStripProps) {
     );
   }
 
+  const handleReauth = async () => {
+    setIsLoading(true);
+    try {
+      await loginWithGoogle();
+      // ログイン成功後、useEffectが再実行されるようにdepsを工夫するか、リロードするか
+      // ここでは userId, date が変わらないので、直接 loadData を呼び出すほうが確実
+      window.location.reload(); 
+    } catch (err) {
+      console.error("Reauth failed:", err);
+      setError("再ログインに失敗しました。");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   if (error) {
     return (
-      <div className="flex items-center space-x-2 py-2 px-4 bg-red-50 dark:bg-red-900/20 text-red-500 rounded-xl border border-red-100 dark:border-red-900/30">
-        <AlertCircle size={14} />
-        <span className="text-[10px] font-medium">{error}</span>
+      <div className="flex flex-col space-y-2 py-2 px-4 bg-red-50 dark:bg-red-900/20 text-red-500 rounded-xl border border-red-100 dark:border-red-900/30">
+        <div className="flex items-center space-x-2">
+          <AlertCircle size={14} />
+          <span className="text-[10px] font-medium leading-tight">{error}</span>
+        </div>
+        {(error.includes("401") || error.includes("403") || error.includes("連携が必要")) && (
+          <button 
+            onClick={handleReauth}
+            className="flex items-center justify-center space-x-1.5 px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded-lg text-[9px] font-bold transition-colors w-fit"
+          >
+            <RefreshCw size={10} className={isLoading ? "animate-spin" : ""} />
+            <span>Google連携を更新する</span>
+          </button>
+        )}
       </div>
     );
   }
