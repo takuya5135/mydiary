@@ -15,8 +15,21 @@ function getFirebaseAdminApp() {
 
   if (serviceAccountKey) {
     try {
-      console.log("[Firebase Admin] Attempting to initialize with service account key...");
-      let cleanedKey = serviceAccountKey.trim().replace(/^['"]|['"]$/g, '');
+      console.log("[Firebase Admin] Detected credentials. Checking format...");
+      let rawKey = serviceAccountKey.trim();
+      
+      // Base64判定: { で始まっていない場合はBase64とみなしてデコードを試みる
+      if (rawKey && !rawKey.startsWith('{')) {
+        console.log("[Firebase Admin] Format seems to be Base64. Decoding...");
+        try {
+          rawKey = Buffer.from(rawKey, 'base64').toString('utf-8');
+        } catch (decodeError) {
+          console.error("[Firebase Admin] Base64 decoding failed:", decodeError);
+        }
+      }
+
+      // 前後の不要な引用符を除去
+      let cleanedKey = rawKey.trim().replace(/^['"]|['"]$/g, '');
       
       let serviceAccount;
       try {
@@ -34,7 +47,7 @@ function getFirebaseAdminApp() {
       return app;
     } catch (e) {
       console.error("[Firebase Admin] Service account initialization failed. Falling back to default:", e);
-      // ここではエラーを投げず、下のデフォルト初期化へフォールバックさせて500エラーでのクラッシュを防ぐ
+      // ここではエラーを投げず、下のデフォルト初期化へフォールバックさせてクラッシュを防ぐ
     }
   }
 
