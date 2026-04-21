@@ -9,32 +9,37 @@ if (!admin.apps.length) {
   
   try {
     if (serviceAccountKey) {
-      // 環境変数が引用符で囲まれていたり、改行が含まれていたりする場合の対策
-      let cleanedKey = serviceAccountKey.trim();
-      // もし ' で囲まれていたら外す
-      if (cleanedKey.startsWith("'") && cleanedKey.endsWith("'")) {
-        cleanedKey = cleanedKey.slice(1, -1);
+      console.log("[Firebase Admin] Environment variable detected. Length:", serviceAccountKey.length);
+      
+      // 前後の不要な空白や引用符を徹底的に除去
+      let cleanedKey = serviceAccountKey.trim().replace(/^['"]|['"]$/g, '');
+      
+      let serviceAccount;
+      try {
+        serviceAccount = JSON.parse(cleanedKey);
+      } catch (parseError: any) {
+        console.warn("[Firebase Admin] First JSON parse attempt failed. Retrying with escaped newline fix...");
+        // Vercelなどで \n がエスケープされた文字列として入っている場合への対策
+        const fixedKey = cleanedKey.replace(/\\n/g, '\n');
+        serviceAccount = JSON.parse(fixedKey);
       }
       
-      const serviceAccount = JSON.parse(cleanedKey);
       admin.initializeApp({
         credential: admin.credential.cert(serviceAccount),
-        // プロジェクトIDを明示的に指定することで "Unable to detect a Project Id" エラーを回避
         projectId: serviceAccount.project_id 
       });
-      console.log("Firebase Admin SDK initialized successfully with service account.");
+      console.log("[Firebase Admin] SDK initialized successfully with service account.");
     } else {
-      // サービスアカウントキーがない場合は環境のデフォルト設定を使用（プロジェクトIDは極力指定）
+      console.warn("[Firebase Admin] FIREBASE_SERVICE_ACCOUNT_KEY is missing in process.env");
+      // サービスアカウントキーがない場合は環境のデフォルト設定を使用
       const projectId = process.env.GOOGLE_CLOUD_PROJECT || process.env.GCLOUD_PROJECT || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
       admin.initializeApp({
         projectId: projectId
       });
-      console.log(`Firebase Admin SDK initialized with default credentials. Project ID: ${projectId || "detecting..."}`);
+      console.log(`[Firebase Admin] Initialized with default credentials. Project ID: ${projectId || "unknown"}`);
     }
   } catch (e) {
-    console.error("Firebase Admin initialization error:", e);
-    // 致命的なエラーとしてログに残すが、アプリ自体がクラッシュしないよう配慮
-    // ただし、projectIdがない場合は後続のFirestore操作で結局エラーになる
+    console.error("[Firebase Admin] Critical configuration error:", e);
   }
 }
 
