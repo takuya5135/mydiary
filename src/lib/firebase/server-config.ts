@@ -7,19 +7,34 @@ import * as admin from 'firebase-admin';
 if (!admin.apps.length) {
   const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
   
-  if (serviceAccountKey) {
-    try {
-      const serviceAccount = JSON.parse(serviceAccountKey);
+  try {
+    if (serviceAccountKey) {
+      // 環境変数が引用符で囲まれていたり、改行が含まれていたりする場合の対策
+      let cleanedKey = serviceAccountKey.trim();
+      // もし ' で囲まれていたら外す
+      if (cleanedKey.startsWith("'") && cleanedKey.endsWith("'")) {
+        cleanedKey = cleanedKey.slice(1, -1);
+      }
+      
+      const serviceAccount = JSON.parse(cleanedKey);
       admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount)
+        credential: admin.credential.cert(serviceAccount),
+        // プロジェクトIDを明示的に指定することで "Unable to detect a Project Id" エラーを回避
+        projectId: serviceAccount.project_id 
       });
-    } catch (e) {
-      console.error("Failed to parse FIREBASE_SERVICE_ACCOUNT_KEY:", e);
-      admin.initializeApp();
+      console.log("Firebase Admin SDK initialized successfully with service account.");
+    } else {
+      // サービスアカウントキーがない場合は環境のデフォルト設定を使用（プロジェクトIDは極力指定）
+      const projectId = process.env.GOOGLE_CLOUD_PROJECT || process.env.GCLOUD_PROJECT || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+      admin.initializeApp({
+        projectId: projectId
+      });
+      console.log(`Firebase Admin SDK initialized with default credentials. Project ID: ${projectId || "detecting..."}`);
     }
-  } else {
-    // 環境変数がない場合はデフォルト（Google Cloud環境など）を使用
-    admin.initializeApp();
+  } catch (e) {
+    console.error("Firebase Admin initialization error:", e);
+    // 致命的なエラーとしてログに残すが、アプリ自体がクラッシュしないよう配慮
+    // ただし、projectIdがない場合は後続のFirestore操作で結局エラーになる
   }
 }
 
