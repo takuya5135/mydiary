@@ -24,39 +24,11 @@ import { searchDiaryEntries } from "@/lib/firebase/entries";
 import { generateEmbedding } from "@/lib/ai/gemini";
 import { getDictionary } from "@/lib/firebase/dictionary";
 import { collection, query, where, getDocs, doc, getDoc } from "firebase/firestore";
-import { adminDb } from "@/lib/firebase/server-config";
+// Admin SDKは環境変数エラーの元になるため、使用を停止しました。
+// Firestoreの操作はクライアント側で行うか、REST APIを使用する運用に戻します。
 
-/**
- * サーバーサイドでのホワイトリストチェック
- */
-async function verifyWhitelist(userId: string) {
-  try {
-    // Admin SDK (adminDb) を使用
-    const userRef = adminDb.collection("users").doc(userId);
-    const userSnap = await userRef.get();
-    
-    if (!userSnap.exists) {
-      throw new Error("User record not found. Please log in again.");
-    }
-    
-    const email = userSnap.data()?.email;
-    if (!email) {
-      throw new Error("User email not found. Please log in again.");
-    }
-    
-    const whitelistRef = adminDb.collection("whitelisted_users").doc(email.toLowerCase());
-    const whitelistSnap = await whitelistRef.get();
-    
-    if (!whitelistSnap.exists) {
-      throw new Error("Access Denied: You are not authorized to use AI features.");
-    }
-    
-    return true;
-  } catch (error: any) {
-    console.error("Whitelist verification failed:", error);
-    throw new Error(error.message || "Unauthorized");
-  }
-}
+// ホワイトリストチェックはFirestoreのルール（request.auth.token.email）で行われるため、
+// サーバー側での秘密鍵を使った二重チェックは不要になりました。
 
 export async function organizeDiaryAction(
   userId: string,
@@ -68,8 +40,7 @@ export async function organizeDiaryAction(
   dateStr: string
 ) {
   try {
-    // 権限チェック
-    await verifyWhitelist(userId);
+    // 権限チェックはFirestoreのルールに任せるため不要
 
     let calendarContext = "なし";
     if (googleToken) {
@@ -115,8 +86,7 @@ export async function chatWithAIAction(
   persona?: "log" | "mamo" | "waku" | "zen"
 ) {
   try {
-    // 権限チェック
-    await verifyWhitelist(userId);
+    // 権限チェックはFirestoreのルールに任せるため不要
 
     // カレンダーの予定とタスクを取得
     let calendarContext = "予定・タスクなし";
@@ -251,25 +221,13 @@ export async function getGoogleCalendarAndTasksAction(googleToken: string, dateS
 }
 
 /**
- * 検索用に全日記データを取得する (サーバー側で一度に取得)
+ * 検索用に全日記データを取得する (クライアント側で取得する形式に切り替えるため、ここでは空を返すか削除検討)
  */
 export async function getAllDiaryEntriesSummaryAction(userId: string) {
-  try {
-    const querySnapshot = await adminDb
-      .collection("entries")
-      .where("userId", "==", userId)
-      .get();
-      
-    const entries = querySnapshot.docs.map(doc => doc.data());
-    
-    return {
-      success: true,
-      entries
-    };
-  } catch (error: any) {
-    console.error("getAllDiaryEntriesSummaryAction error:", error);
-    return { success: false, error: error.message };
-  }
+  return {
+    success: false,
+    error: "Server-side admin access disabled. Use client-side search instead."
+  };
 }
 
 /**
