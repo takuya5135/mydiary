@@ -3,7 +3,8 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Search, X, Loader2, Calendar, ChevronRight, Hash } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { getAllDiaryEntriesSummaryAction, getDictionaryAction } from "@/app/actions";
+import { getRecentEntries } from "@/lib/firebase/entries";
+import { getDictionary } from "@/lib/firebase/dictionary";
 import { DiarySearchEngine, SearchResult } from "@/lib/search";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
@@ -37,17 +38,16 @@ export function SearchModal({ userId, isOpen, onClose, onDateChange }: SearchMod
   const loadData = async () => {
     setIsDataLoading(true);
     try {
-      const [entriesRes, dictRes] = await Promise.all([
-        getAllDiaryEntriesSummaryAction(userId),
-        getDictionaryAction(userId)
+      // サーバーアクションを経由せず、クライアント側SDKで直接取得
+      const [entries, dictionary] = await Promise.all([
+        getRecentEntries(userId, 1000), // 十分に大きな数で全取得を試みる
+        getDictionary(userId)
       ]);
 
-      if (entriesRes.success && dictRes.success) {
-        setData({
-          entries: entriesRes.entries || [],
-          dictionary: dictRes.dictionary || []
-        });
-      }
+      setData({
+        entries: entries || [],
+        dictionary: dictionary || []
+      });
     } catch (error) {
       console.error("Search data load failed:", error);
     } finally {
