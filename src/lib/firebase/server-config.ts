@@ -1,19 +1,26 @@
+import * as admin from 'firebase-admin';
+
 /**
- * サーバーサイド専用のFirestore接続
- * Server Actions内ではこちらを使用し、getAuth（ブラウザ専用）を呼ばない
+ * サーバーサイド専用の管理者権限付きFirestore接続
+ * 環境変数 FIREBASE_SERVICE_ACCOUNT_KEY からサービスアカウント情報を読み取ります
  */
-import { initializeApp, getApps, getApp } from "firebase/app";
-import { getFirestore } from "firebase/firestore";
+if (!admin.apps.length) {
+  const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+  
+  if (serviceAccountKey) {
+    try {
+      const serviceAccount = JSON.parse(serviceAccountKey);
+      admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount)
+      });
+    } catch (e) {
+      console.error("Failed to parse FIREBASE_SERVICE_ACCOUNT_KEY:", e);
+      admin.initializeApp();
+    }
+  } else {
+    // 環境変数がない場合はデフォルト（Google Cloud環境など）を使用
+    admin.initializeApp();
+  }
+}
 
-const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-};
-
-// サーバーサイドでも安全に初期化（authを含まない）
-const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
-export const serverDb = getFirestore(app);
+export const adminDb = admin.firestore();

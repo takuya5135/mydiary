@@ -24,17 +24,18 @@ import { searchDiaryEntries } from "@/lib/firebase/entries";
 import { generateEmbedding } from "@/lib/ai/gemini";
 import { getDictionary } from "@/lib/firebase/dictionary";
 import { collection, query, where, getDocs, doc, getDoc } from "firebase/firestore";
-import { db as serverDb } from "@/lib/firebase/config";
+import { adminDb } from "@/lib/firebase/server-config";
 
 /**
  * サーバーサイドでのホワイトリストチェック
  */
 async function verifyWhitelist(userId: string) {
   try {
-    const userRef = doc(serverDb, "users", userId);
-    const userSnap = await getDoc(userRef);
+    // Admin SDK (adminDb) を使用
+    const userRef = adminDb.collection("users").doc(userId);
+    const userSnap = await userRef.get();
     
-    if (!userSnap.exists()) {
+    if (!userSnap.exists) {
       throw new Error("User record not found. Please log in again.");
     }
     
@@ -43,10 +44,10 @@ async function verifyWhitelist(userId: string) {
       throw new Error("User email not found. Please log in again.");
     }
     
-    const whitelistRef = doc(serverDb, "whitelisted_users", email.toLowerCase());
-    const whitelistSnap = await getDoc(whitelistRef);
+    const whitelistRef = adminDb.collection("whitelisted_users").doc(email.toLowerCase());
+    const whitelistSnap = await whitelistRef.get();
     
-    if (!whitelistSnap.exists()) {
+    if (!whitelistSnap.exists) {
       throw new Error("Access Denied: You are not authorized to use AI features.");
     }
     
@@ -254,12 +255,11 @@ export async function getGoogleCalendarAndTasksAction(googleToken: string, dateS
  */
 export async function getAllDiaryEntriesSummaryAction(userId: string) {
   try {
-    const q = query(
-      collection(serverDb, "entries"),
-      where("userId", "==", userId)
-    );
-    const querySnapshot = await getDocs(q);
-    // @ts-ignore
+    const querySnapshot = await adminDb
+      .collection("entries")
+      .where("userId", "==", userId)
+      .get();
+      
     const entries = querySnapshot.docs.map(doc => doc.data());
     
     return {
