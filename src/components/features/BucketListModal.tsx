@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Trophy, X, Plus, Trash2, CheckCircle2, Circle } from "lucide-react";
-import { BucketItem, getBucketList, addBucketItem, toggleBucketItem, deleteBucketItem } from "@/lib/firebase/bucketList";
+import { Trophy, X, Plus, Trash2, CheckCircle2, Circle, Pencil, Check, RotateCcw } from "lucide-react";
+import { BucketItem, getBucketList, addBucketItem, toggleBucketItem, deleteBucketItem, updateBucketItemTitle } from "@/lib/firebase/bucketList";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface BucketListModalProps {
@@ -15,6 +15,8 @@ export function BucketListModal({ userId, isOpen, onClose }: BucketListModalProp
   const [items, setItems] = useState<BucketItem[]>([]);
   const [newItemTitle, setNewItemTitle] = useState("");
   const [loading, setLoading] = useState(true);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingTitle, setEditingTitle] = useState("");
 
   useEffect(() => {
     if (isOpen) {
@@ -64,6 +66,30 @@ export function BucketListModal({ userId, isOpen, onClose }: BucketListModalProp
       setItems(items.filter(item => item.id !== itemId));
     } catch (error) {
       console.error("Failed to delete item:", error);
+    }
+  };
+
+  const handleStartEdit = (item: BucketItem) => {
+    setEditingId(item.id!);
+    setEditingTitle(item.title);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setEditingTitle("");
+  };
+
+  const handleSaveEdit = async (itemId: string) => {
+    if (!editingTitle.trim()) return;
+    try {
+      await updateBucketItemTitle(itemId, editingTitle.trim());
+      setItems(items.map(item => 
+        item.id === itemId ? { ...item, title: editingTitle.trim() } : item
+      ));
+      setEditingId(null);
+      setEditingTitle("");
+    } catch (error) {
+      console.error("Failed to update item title:", error);
     }
   };
 
@@ -129,29 +155,67 @@ export function BucketListModal({ userId, isOpen, onClose }: BucketListModalProp
                   items.map((item) => (
                     <div 
                       key={item.id}
-                      className={`flex items-center justify-between p-4 rounded-xl border transition-all ${
+                      className={`flex items-center justify-between p-4 rounded-xl border transition-all group ${
                         item.completed 
                           ? "bg-emerald-50/30 dark:bg-emerald-900/10 border-emerald-200/50 dark:border-emerald-800/50" 
                           : "bg-white/40 dark:bg-zinc-800/40 border-slate-200/50 dark:border-zinc-700/50"
                       }`}
                     >
-                      <div className="flex items-center space-x-3 flex-1">
-                        <button 
-                          onClick={() => handleToggle(item.id!, item.completed)}
-                          className={item.completed ? "text-emerald-500" : "text-slate-400"}
-                        >
-                          {item.completed ? <CheckCircle2 size={22} /> : <Circle size={22} />}
-                        </button>
-                        <span className={`text-sm font-medium ${item.completed ? "line-through text-slate-400" : "text-slate-700 dark:text-slate-200"}`}>
-                          {item.title}
-                        </span>
-                      </div>
-                      <button 
-                        onClick={() => handleDelete(item.id!)}
-                        className="p-1.5 text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
-                      >
-                        <Trash2 size={16} />
-                      </button>
+                      {editingId === item.id ? (
+                        <div className="flex items-center space-x-2 flex-1">
+                          <input
+                            type="text"
+                            autoFocus
+                            value={editingTitle}
+                            onChange={(e) => setEditingTitle(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") handleSaveEdit(item.id!);
+                              if (e.key === "Escape") handleCancelEdit();
+                            }}
+                            className="flex-1 bg-white dark:bg-zinc-800 border border-emerald-500 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                          />
+                          <button
+                            onClick={() => handleSaveEdit(item.id!)}
+                            className="p-1.5 text-emerald-500 hover:bg-emerald-500/10 rounded-lg transition-colors"
+                          >
+                            <Check size={18} />
+                          </button>
+                          <button
+                            onClick={handleCancelEdit}
+                            className="p-1.5 text-slate-400 hover:bg-slate-400/10 rounded-lg transition-colors"
+                          >
+                            <RotateCcw size={18} />
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="flex items-center space-x-3 flex-1">
+                            <button 
+                              onClick={() => handleToggle(item.id!, item.completed)}
+                              className={item.completed ? "text-emerald-500" : "text-slate-400"}
+                            >
+                              {item.completed ? <CheckCircle2 size={22} /> : <Circle size={22} />}
+                            </button>
+                            <span className={`text-sm font-medium ${item.completed ? "line-through text-slate-400" : "text-slate-700 dark:text-slate-200"}`}>
+                              {item.title}
+                            </span>
+                          </div>
+                          <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-all">
+                            <button 
+                              onClick={() => handleStartEdit(item)}
+                              className="p-1.5 text-slate-400 hover:text-emerald-500 transition-all"
+                            >
+                              <Pencil size={16} />
+                            </button>
+                            <button 
+                              onClick={() => handleDelete(item.id!)}
+                              className="p-1.5 text-slate-400 hover:text-red-500 transition-all"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        </>
+                      )}
                     </div>
                   ))
                 )}

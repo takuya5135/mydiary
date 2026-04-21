@@ -65,3 +65,8 @@ export const deleteBucketItem = async (itemId: string) => {
   const itemRef = doc(db, COLLECTION_NAME, itemId);
   return await deleteDoc(itemRef);
 };
+
+export const updateBucketItemTitle = async (itemId: string, title: string) => {
+  const itemRef = doc(db, COLLECTION_NAME, itemId);
+  return await updateDoc(itemRef, { title });
+};
