@@ -112,9 +112,17 @@ export const loginWithGoogle = async () => {
         user.email
       );
 
-      if (!exchangeResult.success) {
+      if (exchangeResult.success) {
+        // クライアント側の権限を使用してFirestoreに保存
+        await saveUserToken(
+          user.uid,
+          exchangeResult.accessToken,
+          exchangeResult.refreshToken,
+          user.email
+        );
+      } else {
         console.error("Token exchange failed:", exchangeResult.error);
-        // 致命的ではないが、次回の自動更新ができない
+        alert("Google認証情報の取得に失敗しました。再度お試しください。");
       }
     } catch (err) {
       console.error("Failed to get offline access code:", err);

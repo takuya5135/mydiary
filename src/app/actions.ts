@@ -40,17 +40,15 @@ export async function exchangeAuthCodeAction(
   code: string,
   redirectUri: string,
   email?: string | null
-) {
+): Promise<{ success: true; accessToken: string; refreshToken?: string } | { success: false; error: string }> {
   try {
     const tokens = await exchangeCodeForTokens(code, redirectUri);
-    // access_token は必ず返るが、refresh_token は初回のみ返る場合がある
-    await saveUserToken(
-      userId,
-      tokens.access_token,
-      tokens.refresh_token,
-      email
-    );
-    return { success: true, accessToken: tokens.access_token };
+    // サーバー側では Admin SDK が無効なため、ここでは保存せずトークンをクライアントに返す
+    return { 
+      success: true, 
+      accessToken: tokens.access_token, 
+      refreshToken: tokens.refresh_token 
+    };
   } catch (error: any) {
     console.error("exchangeAuthCodeAction failed:", error);
     return { success: false, error: error.message };
