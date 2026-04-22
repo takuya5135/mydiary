@@ -59,7 +59,7 @@ const getGoogleAuthCode = (email: string): Promise<string> => {
         "profile",
       ].join(" "),
       ux_mode: "redirect",
-      redirect_uri: window.location.origin,
+      redirect_uri: window.location.origin + "/auth/callback",
       hint: email,
       prompt: "consent",
       access_type: "offline",
