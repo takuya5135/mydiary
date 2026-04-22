@@ -35,18 +35,18 @@ export function CalendarStrip({ userId, date }: CalendarStripProps) {
           return;
         }
 
-        const result = await getGoogleCalendarAndTasksAction(token, date);
+        const result = await getGoogleCalendarAndTasksAction(userId, token, date);
         
         if (result.success) {
-          setEvents(result.events || []);
-          setTasks(result.tasks || []);
+          setEvents((result as any).events || []);
+          setTasks((result as any).tasks || []);
         } else {
-          if (result.isAuthError) {
-            // GOOGLE_API_ERROR: 403 [Tasks] ... などの形式になっている
-            const cleanMessage = (result.error || "").replace("GOOGLE_API_ERROR: ", "");
+          const r = result as { success: false; error?: string; isAuthError?: boolean };
+          if (r.isAuthError) {
+            const cleanMessage = (r.error || "").replace("GOOGLE_API_ERROR: ", "");
             setError(`Google API権限エラー: ${cleanMessage}`);
           } else {
-            setError(result.error || "データの読み込みに失敗しました。");
+            setError(r.error || "データの読み込みに失敗しました。");
           }
         }
       } catch (err: any) {

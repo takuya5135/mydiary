@@ -135,7 +135,7 @@ export function DiaryInput({ userId, date, onSave, onOrganizeTrigger }: DiaryInp
         dictionaryContext,
       }, googleToken || null, date);
 
-      if (result.success && result.data) {
+      if (result.success) {
         // 4. クライアント側でFirestoreに保存
         await saveDiaryEntry({
           userId,

@@ -184,10 +184,10 @@ export function ChatWindow({ userId, dateStr, onDateChange }: ChatWindowProps) {
         dateStr
       );
 
-      if (result.success && result.replies) {
+      if (result.success) {
         const addedMsgs: ChatMessage[] = [];
         for (const reply of result.replies) {
-          await saveChatMessage(userId, "model", reply.content, reply.agentId);
+          await saveChatMessage(userId, "model", reply.content, (reply as any).agentId);
           addedMsgs.push({
             ...reply,
             // @ts-ignore

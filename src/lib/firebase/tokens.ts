@@ -3,12 +3,21 @@ import { db } from "./config";
 
 const COLLECTION_NAME = "users";
 
-export const saveUserToken = async (userId: string, accessToken: string, email?: string | null) => {
+export const saveUserToken = async (
+  userId: string, 
+  accessToken: string, 
+  refreshToken?: string, 
+  email?: string | null
+) => {
   const userRef = doc(db, COLLECTION_NAME, userId);
   const data: any = {
     googleAccessToken: accessToken,
     tokenUpdatedAt: Timestamp.now()
   };
+
+  if (refreshToken) {
+    data.googleRefreshToken = refreshToken;
+  }
 
   if (email) {
     data.email = email.toLowerCase();
@@ -27,16 +36,31 @@ export const saveUserToken = async (userId: string, accessToken: string, email?:
   }
 };
 
-export const getUserToken = async (userId: string): Promise<string | null> => {
+export interface UserTokens {
+  accessToken: string | null;
+  refreshToken: string | null;
+}
+
+export const getUserTokens = async (userId: string): Promise<UserTokens | null> => {
   const userRef = doc(db, COLLECTION_NAME, userId);
   try {
     const userDoc = await getDoc(userRef);
     if (userDoc.exists()) {
-      return userDoc.data().googleAccessToken || null;
+      const data = userDoc.data();
+      return {
+        accessToken: data.googleAccessToken || null,
+        refreshToken: data.googleRefreshToken || null
+      };
     }
     return null;
   } catch (error) {
-    console.error("Error fetching token:", error);
+    console.error("Error fetching tokens:", error);
     return null;
   }
 };
+
+export const getUserToken = async (userId: string): Promise<string | null> => {
+  const tokens = await getUserTokens(userId);
+  return tokens?.accessToken || null;
+};
+

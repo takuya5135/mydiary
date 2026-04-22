@@ -35,6 +35,7 @@ export default function RootLayout({
         <AuthProvider>
           {children}
         </AuthProvider>
+        <script src="https://accounts.google.com/gsi/client" async defer></script>
         <script
           dangerouslySetInnerHTML={{
             __html: `
