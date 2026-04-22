@@ -7,8 +7,12 @@ export async function refreshGoogleAccessToken(refreshToken: string): Promise<st
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
 
   if (!clientId || !clientSecret) {
-    console.error("Missing GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET in environment variables");
-    return null;
+    const missing = [];
+    if (!clientId) missing.push("GOOGLE_CLIENT_ID");
+    if (!clientSecret) missing.push("GOOGLE_CLIENT_SECRET");
+    const errorMsg = `Missing environment variables: ${missing.join(", ")}. Please check Vercel settings and REDEPLOY.`;
+    console.error(`[AuthExchange] ${errorMsg}`);
+    throw new Error(errorMsg);
   }
 
   try {
