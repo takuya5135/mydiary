@@ -48,7 +48,7 @@ const getGoogleAuthCode = (email: string): Promise<string> => {
       return;
     }
 
-    window.google.accounts.oauth2.initCodeClient({
+    const client = window.google.accounts.oauth2.initCodeClient({
       client_id: clientId,
       scope: [
         "https://www.googleapis.com/auth/drive.file",
