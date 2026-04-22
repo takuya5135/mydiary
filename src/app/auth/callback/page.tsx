@@ -16,10 +16,19 @@ function CallbackContent() {
     const handleCallback = async () => {
       const code = searchParams.get("code");
       const error = searchParams.get("error");
+      const returnedState = searchParams.get("state");
+      const savedState = sessionStorage.getItem("oauth_state");
 
       if (error) {
         setStatus("error");
         setErrorMessage(`Google連携がキャンセルされたか失敗しました: ${error}`);
+        return;
+      }
+
+      if (returnedState && savedState && returnedState !== savedState) {
+        console.error("State mismatch!", { returnedState, savedState });
+        setStatus("error");
+        setErrorMessage("セキュリティ検証（state mismatch）に失敗しました。もう一度お試しください。");
         return;
       }
 

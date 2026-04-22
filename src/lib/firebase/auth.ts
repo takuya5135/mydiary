@@ -60,10 +60,17 @@ const getGoogleAuthCode = (email: string): Promise<string> => {
       ].join(" "),
       ux_mode: "redirect",
       redirect_uri: window.location.origin + "/auth/callback",
+      state: btoa(Math.random().toString()).substring(0, 16), // CSRF対策
       hint: email,
       prompt: "consent",
       access_type: "offline",
-    }).requestCode();
+    });
+
+    // stateを保存しておく（コールバックで検証するため）
+    // @ts-ignore
+    sessionStorage.setItem("oauth_state", client.state);
+
+    client.requestCode();
   });
 };
 
