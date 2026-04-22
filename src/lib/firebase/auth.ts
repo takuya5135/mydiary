@@ -60,6 +60,7 @@ const getGoogleAuthCode = (email: string): Promise<string> => {
       ].join(" "),
       ux_mode: "popup",
       hint: email,
+      prompt: "consent", // リフレッシュトークンを確実に再取得するため
       access_type: "offline", // リフレッシュトークンを取得するため
       callback: (response: any) => {
         if (response.code) {

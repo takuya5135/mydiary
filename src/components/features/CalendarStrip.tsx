@@ -43,8 +43,7 @@ export function CalendarStrip({ userId, date }: CalendarStripProps) {
         } else {
           const r = result as { success: false; error?: string; isAuthError?: boolean };
           if (r.isAuthError) {
-            const cleanMessage = (r.error || "").replace("GOOGLE_API_ERROR: ", "");
-            setError(`Google API権限エラー: ${cleanMessage}`);
+            setError(r.error || "Google API認証エラー");
           } else {
             setError(r.error || "データの読み込みに失敗しました。");
           }
@@ -88,14 +87,14 @@ export function CalendarStrip({ userId, date }: CalendarStripProps) {
   if (error) {
     return (
       <div className="flex flex-col space-y-2 py-2 px-4 bg-red-50 dark:bg-red-900/20 text-red-500 rounded-xl border border-red-100 dark:border-red-900/30">
-        <div className="flex items-center space-x-2">
-          <AlertCircle size={14} />
+        <div className="flex items-start space-x-2">
+          <AlertCircle size={14} className="mt-0.5 shrink-0" />
           <span className="text-[10px] font-medium leading-tight">{error}</span>
         </div>
-        {(error.includes("401") || error.includes("403") || error.includes("連携が必要")) && (
+        {(error.includes("401") || error.includes("403") || error.includes("認証") || error.includes("連携が必要")) && (
           <button 
             onClick={handleReauth}
-            className="flex items-center justify-center space-x-1.5 px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded-lg text-[9px] font-bold transition-colors w-fit"
+            className="flex items-center justify-center space-x-1.5 px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded-lg text-[9px] font-bold transition-colors w-fit mt-1 shadow-sm"
           >
             <RefreshCw size={10} className={isLoading ? "animate-spin" : ""} />
             <span>Google連携を更新する</span>

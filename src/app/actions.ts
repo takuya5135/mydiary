@@ -76,7 +76,7 @@ async function withTokenRefresh<T>(
     if (isAuthError) {
       const tokens = await getUserTokens(userId);
       if (tokens?.refreshToken) {
-        console.log("Attempting to refresh Google access token for user:", userId);
+        console.log(`[AuthRefresh] Attempting to refresh Google access token for user: ${userId}`);
         const newAccessToken = await refreshGoogleAccessToken(tokens.refreshToken);
 
         if (newAccessToken) {
@@ -84,9 +84,15 @@ async function withTokenRefresh<T>(
           await saveUserToken(userId, newAccessToken);
 
           // 新しいトークンで再試行
-          console.log("Token refreshed. Retrying action...");
+          console.log("[AuthRefresh] Token refreshed successfully. Retrying action...");
           return await action(newAccessToken);
+        } else {
+          console.error(`[AuthRefresh] Failed to refresh token for user: ${userId}. refreshToken might be invalid.`);
+          throw new Error("GOOGLE_API_ERROR: REFRESH_FAILED (Invalid refresh token)");
         }
+      } else {
+        console.warn(`[AuthRefresh] Cannot refresh token for user: ${userId}. No refreshToken found in Firestore.`);
+        throw new Error("GOOGLE_API_ERROR: NO_REFRESH_TOKEN");
       }
     }
     // リフレッシュできない場合や別のエラーの場合はそのまま投げる
@@ -144,12 +150,17 @@ export async function organizeDiaryAction(
       }
       return { success: false, error: error.message };
     }
-  }).catch((error: any): OrganizeDiaryResult => ({
-    success: false,
-    error: error.message?.includes("GOOGLE_API_ERROR")
-      ? "Googleの認証が切れており、自動更新にも失敗しました。右上のアイコンから再ログインしてください。"
-      : error.message,
-  }));
+  }).catch((error: any): OrganizeDiaryResult => {
+    let errorMessage = error.message;
+    if (error.message?.includes("GOOGLE_API_ERROR: NO_REFRESH_TOKEN")) {
+      errorMessage = "Googleの認証が切れており、自動更新のための情報が見つかりません。右上のアイコンから再ログインして権限を許可してください。";
+    } else if (error.message?.includes("GOOGLE_API_ERROR: REFRESH_FAILED")) {
+      errorMessage = "Googleの認証情報の更新に失敗しました。お手数ですが右上のアイコンから再ログインをお願いします。";
+    } else if (error.message?.includes("GOOGLE_API_ERROR")) {
+      errorMessage = "Googleの認証に問題が発生しました。再度ログインを試みてください。";
+    }
+    return { success: false, error: errorMessage };
+  });
 }
 
 // ============================================================
@@ -340,12 +351,20 @@ export async function getGoogleCalendarAndTasksAction(
       console.error("getGoogleCalendarAndTasksAction error:", error);
       throw error; // withTokenRefresh でリフレッシュを試みる
     }
-  }).catch((error: any): GetCalendarResult => ({
-    success: false,
-    error: error.message || "Unknown Error",
-    isAuthError:
-      error.message?.includes("401") || error.message?.includes("403"),
-  }));
+  }).catch((error: any): GetCalendarResult => {
+    let errorMessage = error.message || "Unknown Error";
+    let isAuthError = error.message?.includes("401") || error.message?.includes("403") || error.message?.includes("GOOGLE_API_ERROR");
+
+    if (error.message?.includes("NO_REFRESH_TOKEN") || error.message?.includes("REFRESH_FAILED")) {
+      errorMessage = "認証の有効期限が切れました。再ログインが必要です。";
+    }
+
+    return {
+      success: false,
+      error: errorMessage,
+      isAuthError
+    };
+  });
 }
 
 // ============================================================
