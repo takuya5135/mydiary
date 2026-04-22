@@ -51,6 +51,7 @@ export default function HomeView() {
   }, [code, user]);
 
   const handleGoogleAuthCallback = async (authCode: string) => {
+    if (!user) return;
     try {
       const { exchangeAuthCodeAction } = await import("@/app/actions");
       const { saveUserToken } = await import("@/lib/firebase/tokens");
