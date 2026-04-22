@@ -48,7 +48,7 @@ const getGoogleAuthCode = (email: string): Promise<string> => {
       return;
     }
 
-    const client = window.google.accounts.oauth2.initCodeClient({
+    window.google.accounts.oauth2.initCodeClient({
       client_id: clientId,
       scope: [
         "https://www.googleapis.com/auth/drive.file",
@@ -58,21 +58,12 @@ const getGoogleAuthCode = (email: string): Promise<string> => {
         "email",
         "profile",
       ].join(" "),
-      ux_mode: "popup",
+      ux_mode: "redirect",
+      redirect_uri: window.location.origin,
       hint: email,
-      prompt: "consent", // リフレッシュトークンを確実に再取得するため
-      access_type: "offline", // リフレッシュトークンを取得するため
-      callback: (response: any) => {
-        if (response.code) {
-          resolve(response.code);
-        } else {
-          reject(new Error("No code returned from Google"));
-        }
-      },
-      error_callback: (err: any) => reject(err),
-    });
-
-    client.requestCode();
+      prompt: "consent",
+      access_type: "offline",
+    }).requestCode();
   });
 };
 

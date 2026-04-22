@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { 
   Home, Briefcase, Heart, Sun, Moon, Trophy, Plus, LogOut, CheckCircle2,
@@ -28,6 +28,9 @@ import { backupToDriveAction } from "@/app/actions";
 export default function HomeView() {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const code = searchParams.get("code");
+
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [isBucketModalOpen, setIsBucketModalOpen] = useState(false);
   const [isDictModalOpen, setIsDictModalOpen] = useState(false);
@@ -40,6 +43,45 @@ export default function HomeView() {
   const dateInputRef = useRef<HTMLInputElement>(null);
 
   const dateStr = format(selectedDate, "yyyy-MM-dd");
+
+  useEffect(() => {
+    if (code && user) {
+      handleGoogleAuthCallback(code);
+    }
+  }, [code, user]);
+
+  const handleGoogleAuthCallback = async (authCode: string) => {
+    try {
+      const { exchangeAuthCodeAction } = await import("@/app/actions");
+      const { saveUserToken } = await import("@/lib/firebase/tokens");
+      
+      const result = await exchangeAuthCodeAction(
+        user.uid,
+        authCode,
+        window.location.origin,
+        user.email
+      );
+
+      if (result.success) {
+        await saveUserToken(
+          user.uid,
+          result.accessToken,
+          // @ts-ignore
+          result.refreshToken,
+          user.email
+        );
+        // URLをクリーンアップ
+        router.replace("/");
+        setTimeout(() => alert("Google連携が正常に完了しました！"), 500);
+      } else {
+        console.error("Auth callback failed:", result.error);
+        alert("Google連携に失敗しました: " + result.error);
+      }
+    } catch (error) {
+      console.error(error);
+      alert("エラーが発生しました。");
+    }
+  };
 
   const handleBackup = async () => {
     if (!user || !entry) return;
