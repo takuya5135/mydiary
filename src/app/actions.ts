@@ -9,7 +9,7 @@ import { searchDiaryEntries } from "@/lib/firebase/entries";
 import { generateEmbedding } from "@/lib/ai/gemini";
 import { getDictionary } from "@/lib/firebase/dictionary";
 import { refreshGoogleAccessToken, exchangeCodeForTokens } from "@/lib/google/oauth";
-import { getUserTokens, saveUserToken } from "@/lib/firebase/tokens";
+import { getUserTokensAdmin, saveUserTokenAdmin } from "@/lib/firebase/server-tokens";
 
 // ============================================================
 // バックアップ
@@ -43,7 +43,15 @@ export async function exchangeAuthCodeAction(
 ): Promise<{ success: true; accessToken: string; refreshToken?: string } | { success: false; error: string }> {
   try {
     const tokens = await exchangeCodeForTokens(code, redirectUri);
-    // サーバー側では Admin SDK が無効なため、ここでは保存せずトークンをクライアントに返す
+    
+    // Admin SDK を使用してサーバー側で安全に保存
+    await saveUserTokenAdmin(
+      userId, 
+      tokens.access_token, 
+      tokens.refresh_token, 
+      email
+    );
+
     return { 
       success: true, 
       accessToken: tokens.access_token, 
@@ -72,14 +80,14 @@ async function withTokenRefresh<T>(
       error.message?.includes("GOOGLE_API_ERROR: 403");
 
     if (isAuthError) {
-      const tokens = await getUserTokens(userId);
+      const tokens = await getUserTokensAdmin(userId);
       if (tokens?.refreshToken) {
         console.log(`[AuthRefresh] Attempting to refresh Google access token for user: ${userId}`);
         const newAccessToken = await refreshGoogleAccessToken(tokens.refreshToken);
 
         if (newAccessToken) {
-          // 新しいトークンを保存（リフレッシュトークンは維持）
-          await saveUserToken(userId, newAccessToken);
+          // 新しいトークンを保存（Admin SDK を使用）
+          await saveUserTokenAdmin(userId, newAccessToken);
 
           // 新しいトークンで再試行
           console.log("[AuthRefresh] Token refreshed successfully. Retrying action...");

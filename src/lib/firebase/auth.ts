@@ -31,10 +31,57 @@ export const isUserWhitelisted = async (
   }
 };
 
+/**
+ * Google Identity Services を使用して認可リダイレクトを開始する
+ * 永続的な Refresh Token を取得するために必要
+ */
+export const authorizeGoogle = (email?: string | null): void => {
+  console.log("[Auth] authorizeGoogle started (Redirect Mode)");
+  
+  if (!window.google) {
+    console.error("[Auth] Google GIS client not loaded.");
+    alert("認証クライアントがロードされていません。ページを更新してください。");
+    return;
+  }
+
+  const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+  if (!clientId) {
+    alert("環境設定エラー: クライアントIDが見つかりません。");
+    return;
+  }
+
+  try {
+    const state = btoa(Math.random().toString()).substring(0, 16);
+    sessionStorage.setItem("oauth_state", state);
+
+    const client = window.google.accounts.oauth2.initCodeClient({
+      client_id: clientId,
+      scope: [
+        "https://www.googleapis.com/auth/drive.file",
+        "https://www.googleapis.com/auth/calendar.readonly",
+        "https://www.googleapis.com/auth/tasks.readonly",
+        "openid",
+        "email",
+        "profile",
+      ].join(" "),
+      ux_mode: "redirect",
+      redirect_uri: window.location.origin + "/auth/callback",
+      state: state,
+      hint: email || undefined,
+      prompt: "consent",
+      access_type: "offline", // これにより Refresh Token が取得可能になる
+    });
+
+    client.requestCode();
+  } catch (error) {
+    console.error("[Auth] Failed to trigger Google Auth redirect:", error);
+  }
+};
+
 export const loginWithGoogle = async () => {
-  console.log("[Auth] Falling back to original loginWithGoogle with token saving");
+  console.log("[Auth] Basic loginWithGoogle (Popup Mode)");
   const provider = new GoogleAuthProvider();
-  // スコープの再追加
+  // ポップアップでも最低限のスコープは持たせる
   provider.addScope("https://www.googleapis.com/auth/drive.file");
   provider.addScope("https://www.googleapis.com/auth/calendar.readonly");
   provider.addScope("https://www.googleapis.com/auth/tasks.readonly");
@@ -43,27 +90,11 @@ export const loginWithGoogle = async () => {
     const result = await signInWithPopup(auth, provider);
     const user = result.user;
 
-    // Googleアクセストークンの取得
-    const credential = GoogleAuthProvider.credentialFromResult(result);
-    const accessToken = credential?.accessToken;
-
-    if (accessToken) {
-      console.log("[Auth] Saving access token to Firestore for:", user.uid);
-      // トークンをFirestoreに保存
-      await setDoc(doc(db, "users", user.uid), {
-        email: user.email,
-        accessToken: accessToken,
-        updatedAt: serverTimestamp(),
-      }, { merge: true });
-    }
-
     // ホワイトリストチェック
     const whitelisted = await isUserWhitelisted(user.email);
     if (!whitelisted) {
       await signOut(auth);
-      alert(
-        `アクセス権限がありません (${user.email})\n管理者に利用許可を依頼してください。`
-      );
+      alert(`アクセス権限がありません (${user.email})`);
       throw new Error("Unauthorized user");
     }
 

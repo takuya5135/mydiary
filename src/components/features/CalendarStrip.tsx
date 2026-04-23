@@ -72,8 +72,8 @@ export function CalendarStrip({ userId, date }: CalendarStripProps) {
   const handleReauth = async () => {
     setIsLoading(true);
     try {
-      await loginWithGoogle();
-      window.location.reload(); 
+      const { authorizeGoogle } = await import("@/lib/firebase/auth");
+      authorizeGoogle();
     } catch (err) {
       console.error("Reauth failed:", err);
       setError("再ログインに失敗しました。");
