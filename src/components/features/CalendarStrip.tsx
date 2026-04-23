@@ -3,6 +3,7 @@ import { Calendar as CalendarIcon, Clock, AlertCircle, CheckCircle2, ListTodo } 
 import { CalendarEvent } from "@/lib/google/calendar";
 import { GoogleTask } from "@/lib/google/tasks";
 import { getGoogleCalendarAndTasksAction } from "@/app/actions";
+import { loginWithGoogle } from "@/lib/firebase/auth";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
 import { RefreshCw } from "lucide-react";
@@ -71,11 +72,8 @@ export function CalendarStrip({ userId, date }: CalendarStripProps) {
   const handleReauth = async () => {
     setIsLoading(true);
     try {
-      // @ts-ignore
-      const { authorizeGoogle } = await import("@/lib/firebase/auth");
-      // ユーザーの現在のセッションを使用してGoogle認可を開始
-      authorizeGoogle();
-      // リダイレクトが発生するため、正常系ではここから先は実行されません
+      await loginWithGoogle();
+      window.location.reload(); 
     } catch (err) {
       console.error("Reauth failed:", err);
       setError("再ログインに失敗しました。");
