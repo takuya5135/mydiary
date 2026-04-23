@@ -73,9 +73,8 @@ export function CalendarStrip({ userId, date }: CalendarStripProps) {
     setIsLoading(true);
     try {
       await loginWithGoogle();
-      // ログイン成功後、useEffectが再実行されるようにdepsを工夫するか、リロードするか
-      // ここでは userId, date が変わらないので、直接 loadData を呼び出すほうが確実
-      window.location.reload(); 
+      // loginWithGoogle内でリダイレクトが発生するため、ここから先の処理は実行されません。
+      // もしリダイレクトが発生しなかった場合（エラーなど）のために、ローディングを戻す等の処理はfinallyにあります。
     } catch (err) {
       console.error("Reauth failed:", err);
       setError("再ログインに失敗しました。");
