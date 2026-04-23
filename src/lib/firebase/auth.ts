@@ -5,9 +5,8 @@ import {
   onAuthStateChanged,
   User,
 } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "./config";
-import { saveUserToken } from "./tokens";
 
 declare global {
   interface Window {
@@ -33,7 +32,7 @@ export const isUserWhitelisted = async (
 };
 
 export const loginWithGoogle = async () => {
-  console.log("[Auth] Falling back to original loginWithGoogle");
+  console.log("[Auth] Falling back to original loginWithGoogle with token saving");
   const provider = new GoogleAuthProvider();
   // スコープの再追加
   provider.addScope("https://www.googleapis.com/auth/drive.file");
@@ -43,6 +42,20 @@ export const loginWithGoogle = async () => {
   try {
     const result = await signInWithPopup(auth, provider);
     const user = result.user;
+
+    // Googleアクセストークンの取得
+    const credential = GoogleAuthProvider.credentialFromResult(result);
+    const accessToken = credential?.accessToken;
+
+    if (accessToken) {
+      console.log("[Auth] Saving access token to Firestore for:", user.uid);
+      // トークンをFirestoreに保存
+      await setDoc(doc(db, "users", user.uid), {
+        email: user.email,
+        accessToken: accessToken,
+        updatedAt: serverTimestamp(),
+      }, { merge: true });
+    }
 
     // ホワイトリストチェック
     const whitelisted = await isUserWhitelisted(user.email);
