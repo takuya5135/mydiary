@@ -13,8 +13,14 @@ export async function POST(request: Request) {
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
 
     if (!clientId || !clientSecret) {
-      console.error("Missing GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET");
-      return NextResponse.json({ error: "Server configuration error" }, { status: 500 });
+      const missing = [];
+      if (!clientId) missing.push("GOOGLE_CLIENT_ID");
+      if (!clientSecret) missing.push("GOOGLE_CLIENT_SECRET");
+      console.error(`Missing variables: ${missing.join(", ")}`);
+      return NextResponse.json({ 
+        error: "Server configuration error", 
+        missing: missing 
+      }, { status: 500 });
     }
 
     const oauth2Client = new google.auth.OAuth2(
