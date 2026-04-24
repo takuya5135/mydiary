@@ -91,10 +91,10 @@ export function DictionaryModal({ userId, isOpen, onClose }: DictionaryModalProp
             initial={{ scale: 0.95, opacity: 0, y: 20 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.95, opacity: 0, y: 20 }}
-            className="relative w-full max-w-4xl glass-panel overflow-hidden shadow-2xl flex flex-col md:flex-row h-[80vh]"
+            className="relative w-full max-w-4xl glass-panel overflow-hidden shadow-2xl flex flex-col md:flex-row h-[90vh] md:h-[80vh]"
           >
             {/* Sidebar / List */}
-            <div className="w-full md:w-80 border-r border-white/10 flex flex-col bg-slate-900/20">
+            <div className="w-full md:w-80 border-r border-white/10 flex flex-col bg-slate-900/20 flex-1 md:flex-none">
               <header className="p-4 border-b border-white/10 flex justify-between items-center">
                 <div className="flex items-center space-x-2 text-white">
                   <Book size={20} className="text-orange-500" />
@@ -171,7 +171,7 @@ export function DictionaryModal({ userId, isOpen, onClose }: DictionaryModalProp
               </button>
 
               {editingItem ? (
-                <div className="p-8 space-y-6 overflow-y-auto">
+                <div className="flex-1 p-8 space-y-6 overflow-y-auto">
                   <div className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-1.5">
