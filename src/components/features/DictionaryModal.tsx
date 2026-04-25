@@ -91,10 +91,10 @@ export function DictionaryModal({ userId, isOpen, onClose }: DictionaryModalProp
             initial={{ scale: 0.95, opacity: 0, y: 20 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.95, opacity: 0, y: 20 }}
-            className="relative w-full max-w-4xl glass-panel overflow-hidden shadow-2xl flex flex-col md:flex-row h-[90vh] md:h-[80vh]"
+            className="relative w-full max-w-4xl glass-panel overflow-y-auto md:overflow-hidden shadow-2xl flex flex-col md:flex-row h-[90vh] md:h-[80vh]"
           >
             {/* Sidebar / List */}
-            <div className="w-full md:w-80 border-r border-white/10 flex flex-col bg-slate-900/20 flex-1 md:flex-none">
+            <div className="w-full md:w-80 border-r border-white/10 flex flex-col bg-slate-900/20 flex-1 md:flex-none min-h-0">
               <header className="p-4 border-b border-white/10 flex justify-between items-center">
                 <div className="flex items-center space-x-2 text-white">
                   <Book size={20} className="text-orange-500" />
@@ -162,7 +162,7 @@ export function DictionaryModal({ userId, isOpen, onClose }: DictionaryModalProp
             </div>
 
             {/* Editor Area */}
-            <div className="flex-1 flex flex-col bg-slate-900/40 backdrop-blur-md relative">
+            <div className="flex-1 flex flex-col bg-slate-900/40 backdrop-blur-md relative min-h-0">
               <button 
                 onClick={onClose}
                 className="absolute top-4 right-4 p-2 hover:bg-white/10 rounded-full text-slate-400"
@@ -171,9 +171,9 @@ export function DictionaryModal({ userId, isOpen, onClose }: DictionaryModalProp
               </button>
 
               {editingItem ? (
-                <div className="flex-1 p-8 space-y-6 overflow-y-auto">
+                <div className="flex-1 p-4 md:p-8 space-y-6 overflow-y-auto min-h-0">
                   <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-1.5">
                         <label className="text-[10px] uppercase tracking-wider text-slate-300 font-black">正式名称 / 表示名</label>
                         <input 
@@ -213,7 +213,7 @@ export function DictionaryModal({ userId, isOpen, onClose }: DictionaryModalProp
                     </div>
 
                     {editingItem.category === "person" && (
-                      <div className="grid grid-cols-2 gap-x-4 gap-y-4 p-4 rounded-2xl bg-slate-950/40 border border-white/10">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-4 p-4 rounded-2xl bg-slate-950/40 border border-white/10">
                         <div className="space-y-1.5">
                           <label className="text-[10px] uppercase tracking-wider text-slate-300 font-black">生年 (西暦)</label>
                           <input 
