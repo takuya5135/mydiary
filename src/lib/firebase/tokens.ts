@@ -59,6 +59,14 @@ export const getUserTokens = async (userId: string): Promise<UserTokens | null> 
   }
 };
 
+/**
+ * ユーザーがリフレッシュトークン（合鍵）を持っているか確認する
+ */
+export const hasRefreshToken = async (userId: string): Promise<boolean> => {
+  const tokens = await getUserTokens(userId);
+  return !!tokens?.refreshToken;
+};
+
 export const getUserToken = async (userId: string): Promise<string | null> => {
   const tokens = await getUserTokens(userId);
   return tokens?.accessToken || null;

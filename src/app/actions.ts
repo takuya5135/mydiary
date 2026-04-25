@@ -15,17 +15,30 @@ import { getUserTokensAdmin, saveUserTokenAdmin } from "@/lib/firebase/server-to
 // バックアップ
 // ============================================================
 export async function backupToDriveAction(
-  token: string,
+  userId: string,
+  googleToken: string | null,
   fileName: string,
   mdContent: string
 ): Promise<{ success: boolean; error?: string }> {
-  try {
-    await uploadMarkdownToDrive(token, fileName, mdContent);
-    return { success: true };
-  } catch (error) {
+  return withTokenRefresh(userId, googleToken, async (token) => {
+    try {
+      if (!token) throw new Error("GOOGLE_API_ERROR: MISSING_TOKEN");
+      await uploadMarkdownToDrive(token, fileName, mdContent);
+      return { success: true };
+    } catch (error: any) {
+      console.error("backupToDriveAction internal failed:", error);
+      throw error;
+    }
+  }).catch((error: any) => {
     console.error("backupToDriveAction failed:", error);
-    return { success: false, error: (error as Error).message };
-  }
+    let errorMessage = error.message;
+    if (error.message?.includes("NO_REFRESH_TOKEN")) {
+      errorMessage = "Google連携が必要です。右上のアイコンから再ログインしてください。";
+    } else if (error.message?.includes("REFRESH_FAILED")) {
+      errorMessage = "認証情報の更新に失敗しました。再ログインをお願いします。";
+    }
+    return { success: false, error: errorMessage };
+  });
 }
 
 // ============================================================
@@ -71,13 +84,24 @@ async function withTokenRefresh<T>(
   initialToken: string | null,
   action: (token: string | null) => Promise<T>
 ): Promise<T> {
+  let currentToken = initialToken;
+
+  // トークンが渡されていない場合、まずは Firestore から取得を試みる
+  if (!currentToken) {
+    console.log(`[AuthRefresh] No token provided for user: ${userId}. Fetching from Firestore...`);
+    const tokens = await getUserTokensAdmin(userId);
+    currentToken = tokens?.accessToken || null;
+  }
+
   try {
-    return await action(initialToken);
+    return await action(currentToken);
   } catch (error: any) {
     // 401 または 403 エラーの場合のみリフレッシュを試みる
     const isAuthError =
       error.message?.includes("GOOGLE_API_ERROR: 401") ||
-      error.message?.includes("GOOGLE_API_ERROR: 403");
+      error.message?.includes("GOOGLE_API_ERROR: 403") ||
+      // トークンが元々ない場合も、リフレッシュトークンがあれば更新を試みる価値がある
+      (!currentToken && (error.message?.includes("No token") || error.message?.includes("MISSING_TOKEN")));
 
     if (isAuthError) {
       const tokens = await getUserTokensAdmin(userId);
@@ -345,7 +369,7 @@ export async function getGoogleCalendarAndTasksAction(
 ): Promise<GetCalendarResult> {
   return withTokenRefresh<GetCalendarResult>(userId, googleToken, async (token) => {
     try {
-      if (!token) return { success: false, error: "No token" };
+      if (!token) throw new Error("GOOGLE_API_ERROR: MISSING_TOKEN");
 
       const [events, tasks] = await Promise.all([
         fetchDailyCalendarEvents(token, dateStr),

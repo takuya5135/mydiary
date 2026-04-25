@@ -24,13 +24,14 @@ export function CalendarStrip({ userId, date }: CalendarStripProps) {
       setIsLoading(true);
       setError(null);
       try {
-        // クライアント側（認証済み）で鍵を取得してサーバーに渡す
+        // クライアント側でトークンを取得（なくても一旦進む。サーバー側でリフレッシュを試みるため）
         // @ts-ignore
-        const { getUserToken } = await import("@/lib/firebase/tokens");
+        const { getUserToken, hasRefreshToken } = await import("@/lib/firebase/tokens");
         const token = await getUserToken(userId);
+        const linked = await hasRefreshToken(userId);
 
-        if (!token) {
-          setError("Google連携が必要です。再ログインを行ってください。");
+        if (!linked && !token) {
+          setError("Google連携が必要です。");
           setIsLoading(false);
           return;
         }
@@ -42,11 +43,7 @@ export function CalendarStrip({ userId, date }: CalendarStripProps) {
           setTasks((result as any).tasks || []);
         } else {
           const r = result as { success: false; error?: string; isAuthError?: boolean };
-          if (r.isAuthError) {
-            setError(r.error || "Google API認証エラー");
-          } else {
-            setError(r.error || "データの読み込みに失敗しました。");
-          }
+          setError(r.error || "データの読み込みに失敗しました。");
         }
       } catch (err: any) {
         console.error("CalendarStrip load error:", err);
@@ -73,7 +70,8 @@ export function CalendarStrip({ userId, date }: CalendarStripProps) {
     setIsLoading(true);
     try {
       const { authorizeGoogle } = await import("@/lib/firebase/auth");
-      authorizeGoogle();
+      // 明示的なボタンクリックなので、確実にリフレッシュトークンを取得するために consent を指定
+      authorizeGoogle({ prompt: "consent" });
     } catch (err) {
       console.error("Reauth failed:", err);
       setError("再ログインに失敗しました。");
@@ -88,7 +86,7 @@ export function CalendarStrip({ userId, date }: CalendarStripProps) {
           <AlertCircle size={14} className="mt-0.5 shrink-0" />
           <span className="text-[10px] font-medium leading-tight">{error}</span>
         </div>
-        {(error.includes("401") || error.includes("403") || error.includes("認証") || error.includes("連携が必要")) && (
+        {(error.includes("401") || error.includes("403") || error.includes("認証") || error.includes("連携") || error.includes("有効期限")) && (
           <button 
             onClick={handleReauth}
             className="flex items-center justify-center space-x-1.5 px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded-lg text-[9px] font-bold transition-colors w-fit mt-1 shadow-sm"

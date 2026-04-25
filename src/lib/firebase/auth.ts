@@ -31,12 +31,18 @@ export const isUserWhitelisted = async (
   }
 };
 
+export interface AuthorizeOptions {
+  prompt?: "consent" | "select_account" | "none";
+  email?: string | null;
+}
+
 /**
  * Google Identity Services を使用して認可リダイレクトを開始する
  * 永続的な Refresh Token を取得するために必要
  */
-export const authorizeGoogle = (email?: string | null): void => {
-  console.log("[Auth] authorizeGoogle started (Redirect Mode)");
+export const authorizeGoogle = (options: AuthorizeOptions = {}): void => {
+  const { prompt, email } = options;
+  console.log(`[Auth] authorizeGoogle started (Redirect Mode, prompt: ${prompt || "default"})`);
   
   if (!window.google) {
     console.error("[Auth] Google GIS client not loaded.");
@@ -68,7 +74,7 @@ export const authorizeGoogle = (email?: string | null): void => {
       redirect_uri: window.location.origin + "/auth/callback",
       state: state,
       hint: email || undefined,
-      prompt: "consent",
+      prompt: prompt, // 指定がない場合はGoogleが判断（通常は既に許可済みなら画面が出ない）
       access_type: "offline", // これにより Refresh Token が取得可能になる
     });
 

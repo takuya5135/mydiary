@@ -50,11 +50,6 @@ export default function HomeView() {
       // @ts-ignore
       const { getUserToken } = await import("@/lib/firebase/tokens");
       const token = await getUserToken(user.uid);
-      if (!token) {
-        alert("Google認証情報を取得できませんでした。再度ログインしてください。");
-        setIsBackingUp(false);
-        return;
-      }
 
       const mdContent = `
 # ${dateStr} (my日記)
@@ -77,7 +72,7 @@ Updated at: ${entry.updatedAt ? entry.updatedAt.toDate().toLocaleString() : "不
 `.trim();
 
       const fileName = `${dateStr}_diary.md`;
-      const result = await backupToDriveAction(token, fileName, mdContent);
+      const result = await backupToDriveAction(user.uid, token, fileName, mdContent);
       
       if (result.success) {
         alert("Google Driveへのバックアップが完了しました！");
