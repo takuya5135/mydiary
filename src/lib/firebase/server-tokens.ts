@@ -29,6 +29,8 @@ export const saveUserTokenAdmin = async (
 
   if (refreshToken) {
     data.googleRefreshToken = refreshToken;
+  } else {
+    console.log(`[Admin] No refresh_token provided in this update for user: ${userId}. Existing token will be preserved via merge.`);
   }
 
   if (email) {

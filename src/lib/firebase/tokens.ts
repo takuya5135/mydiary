@@ -17,6 +17,8 @@ export const saveUserToken = async (
 
   if (refreshToken) {
     data.googleRefreshToken = refreshToken;
+  } else {
+    console.log(`[Token] No refresh_token provided for user: ${userId}.`);
   }
 
   if (email) {

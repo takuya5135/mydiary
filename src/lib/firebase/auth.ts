@@ -7,6 +7,7 @@ import {
 } from "firebase/auth";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "./config";
+import { GOOGLE_API_SCOPES } from "../google/oauth";
 
 declare global {
   interface Window {
@@ -62,14 +63,7 @@ export const authorizeGoogle = (options: AuthorizeOptions = {}): void => {
 
     const client = window.google.accounts.oauth2.initCodeClient({
       client_id: clientId,
-      scope: [
-        "https://www.googleapis.com/auth/drive.file",
-        "https://www.googleapis.com/auth/calendar.readonly",
-        "https://www.googleapis.com/auth/tasks.readonly",
-        "openid",
-        "email",
-        "profile",
-      ].join(" "),
+      scope: GOOGLE_API_SCOPES,
       ux_mode: "redirect",
       redirect_uri: window.location.origin + "/auth/callback",
       state: state,
@@ -87,10 +81,10 @@ export const authorizeGoogle = (options: AuthorizeOptions = {}): void => {
 export const loginWithGoogle = async () => {
   console.log("[Auth] Basic loginWithGoogle (Popup Mode)");
   const provider = new GoogleAuthProvider();
-  // ポップアップでも最低限のスコープは持たせる
-  provider.addScope("https://www.googleapis.com/auth/drive.file");
-  provider.addScope("https://www.googleapis.com/auth/calendar.readonly");
-  provider.addScope("https://www.googleapis.com/auth/tasks.readonly");
+  // 統一されたスコープをセット
+  GOOGLE_API_SCOPES.split(" ").forEach(scope => {
+    provider.addScope(scope);
+  });
 
   try {
     const result = await signInWithPopup(auth, provider);

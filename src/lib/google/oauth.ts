@@ -1,5 +1,17 @@
 
 /**
+ * Google API で使用するスコープの定数
+ */
+export const GOOGLE_API_SCOPES = [
+  "https://www.googleapis.com/auth/drive.file",
+  "https://www.googleapis.com/auth/calendar.readonly",
+  "https://www.googleapis.com/auth/tasks.readonly",
+  "openid",
+  "email",
+  "profile",
+].join(" ");
+
+/**
  * リフレッシュトークンを使用して新しいアクセストークンを取得する
  */
 export async function refreshGoogleAccessToken(refreshToken: string): Promise<string | null> {

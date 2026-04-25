@@ -104,24 +104,27 @@ async function withTokenRefresh<T>(
       (!currentToken && (error.message?.includes("No token") || error.message?.includes("MISSING_TOKEN")));
 
     if (isAuthError) {
+      console.log(`[AuthRefresh] Authentication error detected (isAuthError=true). Attempting recovery for user: ${userId}`);
       const tokens = await getUserTokensAdmin(userId);
+      
       if (tokens?.refreshToken) {
-        console.log(`[AuthRefresh] Attempting to refresh Google access token for user: ${userId}`);
+        console.log(`[AuthRefresh] Found refresh_token in Firestore. Attempting Google token refresh...`);
         const newAccessToken = await refreshGoogleAccessToken(tokens.refreshToken);
 
         if (newAccessToken) {
+          console.log(`[AuthRefresh] Successfully obtained new access_token. Saving to Firestore...`);
           // 新しいトークンを保存（Admin SDK を使用）
           await saveUserTokenAdmin(userId, newAccessToken);
 
           // 新しいトークンで再試行
-          console.log("[AuthRefresh] Token refreshed successfully. Retrying action...");
+          console.log("[AuthRefresh] Token updated in Firestore. Retrying original action...");
           return await action(newAccessToken);
         } else {
-          console.error(`[AuthRefresh] Failed to refresh token for user: ${userId}. refreshToken might be invalid.`);
+          console.error(`[AuthRefresh] Google token refresh failed. refresh_token might be expired or revoked.`);
           throw new Error("GOOGLE_API_ERROR: REFRESH_FAILED (Invalid refresh token)");
         }
       } else {
-        console.warn(`[AuthRefresh] Cannot refresh token for user: ${userId}. No refreshToken found in Firestore.`);
+        console.warn(`[AuthRefresh] Recovery impossible: No refresh_token found in Firestore for user: ${userId}. User must re-authenticate with prompt=consent.`);
         throw new Error("GOOGLE_API_ERROR: NO_REFRESH_TOKEN");
       }
     }
