@@ -95,17 +95,27 @@ export function DictionaryModal({ userId, isOpen, onClose }: DictionaryModalProp
           >
             {/* Sidebar / List */}
             <div className="w-full md:w-80 border-r border-white/10 flex flex-col bg-slate-900/20 flex-1 md:flex-none min-h-0">
-              <header className="p-4 border-b border-white/10 flex justify-between items-center">
+              <header className="p-4 border-b border-white/10 flex justify-between items-center bg-black/20">
                 <div className="flex items-center space-x-2 text-white">
                   <Book size={20} className="text-orange-500" />
-                  <span className="font-bold">ナレッジ・ベース</span>
+                  <span className="font-bold tracking-tight">ナレッジ・ベース</span>
                 </div>
-                <button 
-                  onClick={() => setEditingItem({ name: "", aliases: [], category: "person", attributes: {} })}
-                  className="p-1.5 hover:bg-white/10 rounded-lg text-white"
-                >
-                  <Plus size={20} />
-                </button>
+                <div className="flex items-center space-x-1">
+                  <button 
+                    onClick={() => setEditingItem({ name: "", aliases: [], category: "person", attributes: {} })}
+                    className="p-1.5 hover:bg-white/10 rounded-lg text-white transition-colors"
+                    title="新規追加"
+                  >
+                    <Plus size={20} />
+                  </button>
+                  <button 
+                    onClick={onClose}
+                    className="p-1.5 hover:bg-white/10 rounded-lg text-slate-400 hover:text-white transition-colors"
+                    title="閉じる"
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
               </header>
 
               {/* Search & Filter */}
