@@ -43,7 +43,7 @@ export default function HomeView() {
   const dateStr = format(selectedDate, "yyyy-MM-dd");
 
   const handleBackup = async () => {
-    if (!user || !entry) return;
+    if (!user) return;
     setIsBackingUp(true);
 
     try {
@@ -51,33 +51,16 @@ export default function HomeView() {
       const { getUserToken } = await import("@/lib/firebase/tokens");
       const token = await getUserToken(user.uid);
 
-      const mdContent = `
-# ${dateStr} (my日記)
-
-## 記録内容
-### Home
-${entry.segments?.home || "なし"}
-
-### Work
-${entry.segments?.work || "なし"}
-
-### Hobby
-${entry.segments?.hobby || "なし"}
-
-## 原文
-${entry.rawText}
-
----
-Updated at: ${entry.updatedAt ? entry.updatedAt.toDate().toLocaleString() : "不明"}
-`.trim();
-
-      const fileName = `${dateStr}_diary.md`;
-      const result = await backupToDriveAction(user.uid, token, fileName, mdContent);
+      // 新しい同期エンジン（一括バックアップ・更新）を実行
+      const { syncBackupAction } = await import("@/app/actions");
+      const result = await syncBackupAction(user.uid, token);
       
       if (result.success) {
-        alert("Google Driveへのバックアップが完了しました！");
+        // fetchEntry を呼んで driveSyncedAt などの最新状態を反映
+        fetchEntry();
+        alert("Google Driveとの同期が完了しました！");
       } else {
-        alert("バックアップに失敗しました: " + result.error);
+        alert("同期に失敗しました: " + result.error);
       }
     } catch (error) {
       console.error(error);
@@ -149,6 +132,22 @@ Updated at: ${entry.updatedAt ? entry.updatedAt.toDate().toLocaleString() : "不
     setHealthModalType(type);
   };
 
+  const autoSync = async () => {
+    if (!user) return;
+    try {
+      // @ts-ignore
+      const { getUserToken } = await import("@/lib/firebase/tokens");
+      const token = await getUserToken(user.uid);
+      const { syncBackupAction } = await import("@/app/actions");
+      await syncBackupAction(user.uid, token);
+      // 同期完了後に状態を更新
+      const data = await getDiaryEntry(user.uid, dateStr);
+      setEntry(data);
+    } catch (e) {
+      console.warn("[AutoSync] Background sync failed:", e);
+    }
+  };
+
   const handleSaveSegment = async (theme: 'home' | 'work' | 'hobby', value: string) => {
     if (!user || !entry) return;
     const newSegments = {
@@ -162,6 +161,7 @@ Updated at: ${entry.updatedAt ? entry.updatedAt.toDate().toLocaleString() : "不
       segments: newSegments
     });
     fetchEntry();
+    autoSync(); // 保存後に自動同期
   };
 
   if (loading || !user) {
@@ -275,7 +275,10 @@ Updated at: ${entry.updatedAt ? entry.updatedAt.toDate().toLocaleString() : "不
             <DiaryInput 
               userId={user.uid} 
               date={dateStr} 
-              onSave={fetchEntry}
+              onSave={() => {
+                fetchEntry();
+                autoSync();
+              }}
             />
             
             <div className="glass-panel p-6">

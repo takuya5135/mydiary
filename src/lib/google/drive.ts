@@ -5,16 +5,20 @@ export interface DriveInsertResult {
 
 const BACKUP_FOLDER_NAME = "myDiary_Backup";
 
-export const uploadMarkdownToDrive = async (
+/**
+ * Google Driveへファイルをアップロードまたは更新する
+ */
+export const uploadToDrive = async (
   accessToken: string,
   fileName: string,
-  content: string
+  content: string,
+  existingFileId?: string | null
 ): Promise<DriveInsertResult> => {
-  // 1. Find or Create Folder
+  // 1. フォルダの取得または作成
   const folderId = await getOrCreateFolder(accessToken, BACKUP_FOLDER_NAME);
 
-  // 2. Search for existing file with same name in that folder
-  const existingFileId = await findFileInFolder(accessToken, folderId, fileName);
+  // 2. 既存ファイルの検索（IDが指定されていない場合のみ）
+  const fileId = existingFileId || await findFileInFolder(accessToken, folderId, fileName);
 
   const metadata = {
     name: fileName,
@@ -30,8 +34,8 @@ export const uploadMarkdownToDrive = async (
   let url = "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart";
   let method = "POST";
 
-  if (existingFileId) {
-    url = `https://www.googleapis.com/upload/drive/v3/files/${existingFileId}?uploadType=multipart`;
+  if (fileId) {
+    url = `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=multipart`;
     method = "PATCH";
   }
 

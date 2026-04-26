@@ -46,6 +46,8 @@ export interface DiaryEntry {
   photos?: string[];
   updatedAt?: Timestamp;
   embedding?: number[]; // ベクトル検索用 (Phase 2)
+  driveFileId?: string; // Google Drive上のファイルID
+  driveSyncedAt?: Timestamp; // 最終同期日時
 }
 
 const COLLECTION_NAME = "entries";

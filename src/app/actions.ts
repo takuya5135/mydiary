@@ -1,6 +1,7 @@
 "use server";
 
-import { uploadMarkdownToDrive } from "@/lib/google/drive";
+import { uploadToDrive } from "@/lib/google/drive";
+import { syncUnsyncedEntriesToDrive } from "@/lib/google/sync";
 import { organizeDiary, chatWithCompanion } from "@/lib/ai/huddle";
 import { fetchDailyCalendarEvents } from "@/lib/google/calendar";
 import { fetchDailyTasks } from "@/lib/google/tasks";
@@ -14,6 +15,29 @@ import { getUserTokensAdmin, saveUserTokenAdmin } from "@/lib/firebase/server-to
 // ============================================================
 // バックアップ
 // ============================================================
+
+/**
+ * 未同期の日記を Google Drive へ一括バックアップ・更新する
+ */
+export async function syncBackupAction(
+  userId: string,
+  googleToken: string | null
+): Promise<{ success: boolean; error?: string }> {
+  return withTokenRefresh(userId, googleToken, async (token) => {
+    try {
+      if (!token) throw new Error("GOOGLE_API_ERROR: MISSING_TOKEN");
+      await syncUnsyncedEntriesToDrive(userId, token);
+      return { success: true };
+    } catch (error: any) {
+      console.error("syncBackupAction internal failed:", error);
+      throw error;
+    }
+  }).catch((error: any) => {
+    console.error("syncBackupAction failed:", error);
+    return { success: false, error: error.message };
+  });
+}
+
 export async function backupToDriveAction(
   userId: string,
   googleToken: string | null,
@@ -23,7 +47,7 @@ export async function backupToDriveAction(
   return withTokenRefresh(userId, googleToken, async (token) => {
     try {
       if (!token) throw new Error("GOOGLE_API_ERROR: MISSING_TOKEN");
-      await uploadMarkdownToDrive(token, fileName, mdContent);
+      await uploadToDrive(token, fileName, mdContent);
       return { success: true };
     } catch (error: any) {
       console.error("backupToDriveAction internal failed:", error);
