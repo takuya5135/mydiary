@@ -61,6 +61,12 @@ export const authorizeGoogle = (options: AuthorizeOptions = {}): void => {
     const state = btoa(Math.random().toString()).substring(0, 16);
     sessionStorage.setItem("oauth_state", state);
 
+    // localStorage または引数からリフレッシュトークンの存在を確認
+    const cachedToken = typeof window !== "undefined" ? localStorage.getItem("googleRefreshToken") : null;
+    const effectivePrompt = prompt || (cachedToken ? "" : "consent");
+
+    console.log(`[Auth] authorizeGoogle: effectivePrompt="${effectivePrompt}" (cachedToken: ${!!cachedToken})`);
+
     const client = window.google.accounts.oauth2.initCodeClient({
       client_id: clientId,
       scope: GOOGLE_API_SCOPES,
@@ -68,8 +74,8 @@ export const authorizeGoogle = (options: AuthorizeOptions = {}): void => {
       redirect_uri: window.location.origin + "/auth/callback",
       state: state,
       hint: email || undefined,
-      prompt: prompt, // 指定がない場合はGoogleが判断（通常は既に許可済みなら画面が出ない）
-      access_type: "offline", // これにより Refresh Token が取得可能になる
+      prompt: effectivePrompt,
+      access_type: "offline",
     });
 
     client.requestCode();

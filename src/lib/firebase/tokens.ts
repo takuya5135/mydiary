@@ -17,8 +17,6 @@ export const saveUserToken = async (
 
   if (refreshToken) {
     data.googleRefreshToken = refreshToken;
-  } else {
-    console.log(`[Token] No refresh_token provided for user: ${userId}.`);
   }
 
   if (email) {
@@ -26,12 +24,9 @@ export const saveUserToken = async (
   }
   
   try {
-    const userDoc = await getDoc(userRef);
-    if (userDoc.exists()) {
-      await updateDoc(userRef, data);
-    } else {
-      await setDoc(userRef, data);
-    }
+    // merge: true により、既存のフィールドを保持したままトークン情報を更新・保存
+    await setDoc(userRef, data, { merge: true });
+    console.log(`[Token] Successfully saved tokens for user: ${userId}`);
   } catch (error) {
     console.error("Error saving token:", error);
     throw error;
