@@ -110,11 +110,19 @@ async function withTokenRefresh<T>(
 ): Promise<T> {
   let currentToken = initialToken;
 
-  // トークンが渡されていない場合、まずは Firestore から取得を試みる
+  // トークンが渡されていない場合、まずは Firestore から取得し、必要なら即座にリフレッシュを試みる
   if (!currentToken) {
-    console.log(`[AuthRefresh] No token provided for user: ${userId}. Fetching from Firestore...`);
+    console.log(`[AuthRefresh] No token provided for user: ${userId}. Checking Firestore...`);
     const tokens = await getUserTokensAdmin(userId);
     currentToken = tokens?.accessToken || null;
+
+    if (!currentToken && tokens?.refreshToken) {
+      console.log(`[AuthRefresh] No access_token but refresh_token exists. Attempting silent refresh...`);
+      currentToken = await refreshGoogleAccessToken(tokens.refreshToken);
+      if (currentToken) {
+        await saveUserTokenAdmin(userId, currentToken);
+      }
+    }
   }
 
   try {
