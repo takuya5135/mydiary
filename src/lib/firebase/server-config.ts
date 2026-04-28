@@ -2,11 +2,16 @@ import * as admin from "firebase-admin";
 
 const project_id = process.env.FIREBASE_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
 const client_email = process.env.FIREBASE_CLIENT_EMAIL;
-// 改行コード \n を正しく処理し、前後を囲む引用符も除去する
-const private_key = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n").replace(/^"(.*)"$/, "$1");
+const privateKey = process.env.FIREBASE_PRIVATE_KEY
+  ? process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n').replace(/"/g, '')
+  : undefined;
+
+if (!privateKey) {
+  console.error("[Admin] Missing Private Key: FIREBASE_PRIVATE_KEY is not set or empty.");
+}
 
 if (!admin.apps.length) {
-  if (!project_id || !client_email || !private_key) {
+  if (!project_id || !client_email || !privateKey) {
     console.warn("Firebase Admin SDK credentials missing. Server-side operations may fail.");
   } else {
     try {
@@ -14,7 +19,7 @@ if (!admin.apps.length) {
         credential: admin.credential.cert({
           projectId: project_id,
           clientEmail: client_email,
-          privateKey: private_key,
+          privateKey: privateKey,
         }),
       });
       console.log("Firebase Admin SDK initialized successfully.");
