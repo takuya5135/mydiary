@@ -167,10 +167,10 @@ async function seedKnowledgeTree() {
   }
 
   console.log('🌱 Seeding Knowledge Tree to Firestore...');
-  const batch = adminDb.batch();
+  const batch = adminDb!.batch();
 
   nodesData.forEach((node) => {
-    const docRef = adminDb.collection(KNOWLEDGE_COLLECTION).doc(node.id);
+    const docRef = adminDb!.collection(KNOWLEDGE_COLLECTION).doc(node.id);
     const dataToSave: KnowledgeNode = {
       ...node,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),

@@ -51,7 +51,7 @@ Output your choice strictly as a JSON object with a single key "categoryId" cont
 ${diaryText}
 
 [Available Categories]
-${categories.map(c => `- ID: ${c.id}, Title: ${c.title}, Summary: ${c.summary}`).join('\n')}
+${categories.map(c => `- ID: ${c.id}, Title: ${(c as any).title}, Summary: ${(c as any).summary}`).join('\n')}
 `;
 
   const model = getGeminiModel(MODELS.MAIN);
@@ -68,7 +68,7 @@ ${categories.map(c => `- ID: ${c.id}, Title: ${c.title}, Summary: ${c.summary}`)
   const selectedCategoryId = catResultObj.categoryId;
   
   const selectedCategory = categories.find(c => c.id === selectedCategoryId);
-  console.log(`✅ Selected Category: ${selectedCategory?.title || selectedCategoryId}`);
+  console.log(`✅ Selected Category: ${(selectedCategory as any)?.title || selectedCategoryId}`);
 
   if (!selectedCategory) {
      console.error('Invalid category selected.');
@@ -88,7 +88,7 @@ Output your choice strictly as a JSON object with a single key "clusterId" conta
 ${diaryText}
 
 [Available Clusters]
-${clusters.map(c => `- ID: ${c.id}, Title: ${c.title}, Summary: ${c.summary}`).join('\n')}
+${clusters.map(c => `- ID: ${c.id}, Title: ${(c as any).title}, Summary: ${(c as any).summary}`).join('\n')}
 `;
 
   const clusterResult = await model.generateContent({
@@ -103,7 +103,7 @@ ${clusters.map(c => `- ID: ${c.id}, Title: ${c.title}, Summary: ${c.summary}`).j
   const selectedClusterId = clusterResultObj.clusterId;
 
   const selectedCluster = clusters.find(c => c.id === selectedClusterId);
-  console.log(`✅ Selected Cluster: ${selectedCluster?.title || selectedClusterId}`);
+  console.log(`✅ Selected Cluster: ${(selectedCluster as any)?.title || selectedClusterId}`);
   
   console.log(`\n🎉 Routing Complete! Target Cluster ID: [${selectedClusterId}]`);
 }
