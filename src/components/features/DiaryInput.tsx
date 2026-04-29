@@ -99,6 +99,14 @@ export function DiaryInput({ userId, date, onSave, onOrganizeTrigger }: DiaryInp
         date,
         rawText: text
       });
+      
+      // Fire and forget routing update (サイレント・インデックス)
+      fetch("/api/entries/route", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, date, text })
+      }).catch(err => console.error("AutoRouting fetch error:", err));
+
       // 保存したあと親のStateを更新させる
       const current = await getDiaryEntry(userId, date);
       if (current && onSave) onSave(current);
@@ -145,6 +153,13 @@ export function DiaryInput({ userId, date, onSave, onOrganizeTrigger }: DiaryInp
           keywords: result.data.keywords, // キーワードを保存
           embedding: result.embedding, // ベクトルデータを保存
         });
+        
+        // Fire and forget routing update (サイレント・インデックス)
+        fetch("/api/entries/route", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userId, date, text })
+        }).catch(err => console.error("AutoRouting fetch error:", err));
         
         // 4.5 提案をセット
         if (result.data.dictionarySuggestions && result.data.dictionarySuggestions.length > 0) {

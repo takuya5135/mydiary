@@ -48,6 +48,7 @@ export interface DiaryEntry {
   embedding?: number[]; // ベクトル検索用 (Phase 2)
   driveFileId?: string; // Google Drive上のファイルID
   driveSyncedAt?: Timestamp; // 最終同期日時
+  clusterId?: string; // Corpus2Skill 自動ルーティングによる所属クラスタID
 }
 
 const COLLECTION_NAME = "entries";
